@@ -38,6 +38,21 @@ export function errorResponse(error: unknown) {
   }
 
   const message = error instanceof Error ? error.message : "Unexpected backend error";
-  const status = message.includes("not found") || message.includes("Not found") ? 404 : 500;
+  const status = inferStatusFromMessage(message);
   return NextResponse.json({ error: message }, { status });
+}
+
+function inferStatusFromMessage(message: string): number {
+  if (message.includes("not found") || message.includes("Not found")) return 404;
+  if (
+    message.includes("does not match") ||
+    message.includes("exceeds remaining funding") ||
+    message.includes("must be positive") ||
+    message.includes("does not have an escrow contract") ||
+    message.includes("missing") ||
+    message.includes("expired")
+  ) {
+    return 400;
+  }
+  return 500;
 }

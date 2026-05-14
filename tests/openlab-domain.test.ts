@@ -1,16 +1,24 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   addEvidenceToMilestone,
   approveMilestoneLocally,
+  attachEscrowCreation,
+  attachEscrowFunding,
   findExperimentBySlug,
   getExperiments,
   releaseMilestoneLocally,
+  resetExperimentsForTests,
+  validateMilestoneOperation,
 } from "@/lib/experiments";
 
 const waterWatchSlug = "waterwatch-costa-rica";
 
 describe("OpenLab experiment domain", () => {
+  beforeEach(() => {
+    resetExperimentsForTests();
+  });
+
   it("seeds WaterWatch Costa Rica with three escrow milestones totaling 1,000 USDC", () => {
     const experiment = findExperimentBySlug(waterWatchSlug);
 
@@ -45,12 +53,49 @@ describe("OpenLab experiment domain", () => {
     expect(milestone?.evidence.map((item) => item.title)).toContain("Sampling plan");
   });
 
-  it("approves and releases milestones locally after Trustless Work transaction submission", () => {
-    approveMilestoneLocally(waterWatchSlug, "waterwatch-methodology", "tx-approve-1");
-    const released = releaseMilestoneLocally(waterWatchSlug, "waterwatch-methodology", "tx-release-1");
+  it("treats Trustless Work multi-release approval as an immediate local release", () => {
+    const released = approveMilestoneLocally(waterWatchSlug, "waterwatch-methodology", "tx-approve-1");
 
     const milestone = released.milestones.find((item) => item.id === "waterwatch-methodology");
     expect(milestone?.status).toBe("released");
-    expect(milestone?.lastTransactionHash).toBe("tx-release-1");
+    expect(milestone?.trustlessWorkStatus).toContain("Released");
+    expect(milestone?.lastTransactionHash).toBe("tx-approve-1");
+  });
+
+  it("marks the experiment completed when all milestones have been released", () => {
+    releaseMilestoneLocally(waterWatchSlug, "waterwatch-methodology", "tx-release-1");
+    releaseMilestoneLocally(waterWatchSlug, "waterwatch-field-data", "tx-release-2");
+    const completed = releaseMilestoneLocally(waterWatchSlug, "waterwatch-open-report", "tx-release-3");
+
+    expect(completed.status).toBe("completed");
+  });
+
+  it("rejects mismatched milestone IDs and indices before creating Trustless Work transactions", () => {
+    expect(() =>
+      validateMilestoneOperation({
+        experimentSlug: waterWatchSlug,
+        milestoneId: "waterwatch-methodology",
+        milestoneIndex: 2,
+      }),
+    ).toThrow(/does not match milestone index/);
+  });
+
+  it("rejects contract IDs that do not match the experiment escrow", () => {
+    attachEscrowCreation(waterWatchSlug, "CONTRACT_REAL", "tx-create");
+
+    expect(() =>
+      validateMilestoneOperation({
+        experimentSlug: waterWatchSlug,
+        milestoneId: "waterwatch-methodology",
+        milestoneIndex: 0,
+        contractId: "CONTRACT_FAKE",
+      }),
+    ).toThrow(/does not match experiment escrow contract/);
+  });
+
+  it("rejects overfunding locally so the UI cannot display false escrow balances", () => {
+    attachEscrowFunding(waterWatchSlug, 1000, "tx-fund-1");
+
+    expect(() => attachEscrowFunding(waterWatchSlug, 1, "tx-fund-2")).toThrow(/exceeds remaining funding/);
   });
 });

@@ -1,3 +1,6 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+
 import type { EscrowMetadata, Evidence, Experiment, MilestoneStatus } from "@/lib/types";
 import { buildViewerUrl } from "@/lib/trustless-work/openlab-mapper";
 
@@ -136,7 +139,7 @@ const seededExperiments: Experiment[] = [
   },
 ];
 
-let experiments = clone(seededExperiments);
+let experiments = loadExperiments();
 
 export function getExperiments(): Experiment[] {
   return clone(experiments);
@@ -167,6 +170,7 @@ export function addEvidenceToMilestone(experimentSlug: string, milestoneId: stri
     experiment.status = "in_progress";
   }
 
+  persistExperiments();
   return clone(experiment);
 }
 
@@ -183,25 +187,27 @@ export function approveMilestoneLocally(
   milestoneId: string,
   transactionHash?: string,
 ): Experiment {
-  return updateMilestoneStatus(experimentSlug, milestoneId, "approved", "Approved on Trustless Work", transactionHash);
+  return releaseMilestoneLocally(experimentSlug, milestoneId, transactionHash, "Approved and Released through Trustless Work");
 }
 
 export function releaseMilestoneLocally(
   experimentSlug: string,
   milestoneId: string,
   transactionHash?: string,
+  trustlessWorkStatus = "Released through Trustless Work",
 ): Experiment {
   const experiment = updateMilestoneStatus(
     experimentSlug,
     milestoneId,
     "released",
-    "Released through Trustless Work",
+    trustlessWorkStatus,
     transactionHash,
   );
 
   const allReleased = experiment.milestones.length > 0 && experiment.milestones.every((item) => item.status === "released");
   if (allReleased) {
     requireExperimentBySlug(experimentSlug).status = "completed";
+    persistExperiments();
     return clone(requireExperimentBySlug(experimentSlug));
   }
 
@@ -225,6 +231,7 @@ export function attachEscrowCreation(
     lastOperation: "create_escrow",
     lastTransactionHash: transactionHash,
   } satisfies EscrowMetadata;
+  persistExperiments();
   return clone(experiment);
 }
 
@@ -234,6 +241,16 @@ export function attachEscrowFunding(
   transactionHash?: string,
 ): Experiment {
   const experiment = requireExperimentBySlug(experimentSlug);
+  const remaining = experiment.fundingGoal - experiment.fundedAmount;
+
+  if (amount <= 0) {
+    throw new Error("Funding amount must be positive");
+  }
+
+  if (amount > remaining) {
+    throw new Error(`Funding amount ${amount} exceeds remaining funding ${remaining}`);
+  }
+
   experiment.fundedAmount = Math.min(experiment.fundingGoal, experiment.fundedAmount + amount);
   experiment.status = experiment.fundedAmount >= experiment.fundingGoal ? "funded" : "funding";
   experiment.escrow = {
@@ -243,11 +260,37 @@ export function attachEscrowFunding(
     lastOperation: "fund_escrow",
     lastTransactionHash: transactionHash,
   } satisfies EscrowMetadata;
+  persistExperiments();
   return clone(experiment);
 }
 
 export function resetExperimentsForTests(): void {
   experiments = clone(seededExperiments);
+  persistExperiments();
+}
+
+export function validateMilestoneOperation(input: {
+  experimentSlug: string;
+  milestoneId: string;
+  milestoneIndex?: number | string;
+  contractId?: string;
+}): { experiment: Experiment; milestoneId: string; milestoneIndex: number } {
+  const experiment = requireExperimentBySlug(input.experimentSlug);
+  const milestone = requireMilestone(experiment, input.milestoneId);
+
+  if (input.milestoneIndex !== undefined && Number(input.milestoneIndex) !== milestone.index) {
+    throw new Error(`Milestone ID ${input.milestoneId} does not match milestone index ${input.milestoneIndex}`);
+  }
+
+  const storedContractId = experiment.escrow.contractId ?? experiment.escrowContractId;
+  if (input.contractId && !storedContractId) {
+    throw new Error(`Experiment ${input.experimentSlug} does not have an escrow contract yet`);
+  }
+  if (input.contractId && storedContractId && input.contractId !== storedContractId) {
+    throw new Error(`Contract ID ${input.contractId} does not match experiment escrow contract ${storedContractId}`);
+  }
+
+  return { experiment: clone(experiment), milestoneId: milestone.id, milestoneIndex: milestone.index };
 }
 
 function updateMilestoneStatus(
@@ -264,9 +307,10 @@ function updateMilestoneStatus(
   milestone.lastTransactionHash = transactionHash;
   experiment.escrow.lastTransactionHash = transactionHash;
   experiment.escrow.lastOperation = status;
-  if (status === "approved") {
+  if (status === "approved" || status === "released") {
     experiment.status = "in_progress";
   }
+  persistExperiments();
   return clone(experiment);
 }
 
@@ -276,6 +320,36 @@ function requireMilestone(experiment: Experiment, milestoneId: string) {
     throw new Error(`Milestone not found: ${milestoneId}`);
   }
   return milestone;
+}
+
+function dataFilePath(): string {
+  return resolve(process.env.OPENLAB_DATA_FILE ?? ".openlab-data.json");
+}
+
+function loadExperiments(): Experiment[] {
+  const filePath = dataFilePath();
+  if (!existsSync(filePath)) return clone(seededExperiments);
+
+  try {
+    const parsed = JSON.parse(readFileSync(filePath, "utf8")) as { experiments?: Experiment[] };
+    if (Array.isArray(parsed.experiments) && parsed.experiments.length > 0) {
+      return parsed.experiments;
+    }
+  } catch (error) {
+    console.warn("Failed to load persisted OpenLab experiment state; using seeds", error);
+  }
+
+  return clone(seededExperiments);
+}
+
+function persistExperiments(): void {
+  try {
+    const filePath = dataFilePath();
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeFileSync(filePath, `${JSON.stringify({ experiments }, null, 2)}\n`);
+  } catch (error) {
+    console.warn("Failed to persist OpenLab experiment state", error);
+  }
 }
 
 function clone<T>(value: T): T {

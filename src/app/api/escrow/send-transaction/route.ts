@@ -8,51 +8,74 @@ import {
   markMilestoneCompleteLocally,
   releaseMilestoneLocally,
 } from "@/lib/experiments";
+import { consumePendingTransaction, getPendingTransaction } from "@/lib/pending-transactions";
 import { createTrustlessWorkClientFromEnv } from "@/lib/trustless-work/client";
 
 const schema = z.object({
   signedXdr: z.string().min(1),
-  experimentSlug: z.string().optional(),
-  operation: z.enum(["create_escrow", "fund_escrow", "complete_milestone", "approve_milestone", "release_milestone"]).optional(),
-  milestoneId: z.string().optional(),
-  expectedContractId: z.string().optional(),
-  amount: z.number().positive().optional(),
+  pendingTransactionId: z.string().min(1),
 });
 
 export async function POST(request: Request) {
   try {
     const input = await readJson(request, schema);
+    const pending = getPendingTransaction(input.pendingTransactionId);
+    if (!pending) {
+      return ok({ error: "Pending transaction not found, expired, or already consumed" }, { status: 400 });
+    }
+
     const tx = await createTrustlessWorkClientFromEnv().sendTransaction({ signedXdr: input.signedXdr });
+    consumePendingTransaction(input.pendingTransactionId);
     const transactionHash = tx.transactionHash;
-    const contractId = tx.contractId ?? input.expectedContractId;
     let experiment = undefined;
 
-    if (input.experimentSlug && input.operation === "create_escrow" && contractId) {
-      experiment = attachEscrowCreation(input.experimentSlug, contractId, transactionHash);
+    if (pending.operation === "create_escrow") {
+      const contractId = tx.contractId ?? demoContractIdForCreate(pending.id);
+      if (!contractId) {
+        return ok(
+          {
+            error:
+              "Trustless Work did not return a contract ID for the create escrow transaction. Sync the escrow before updating local state.",
+            transaction: tx,
+          },
+          { status: 502 },
+        );
+      }
+      experiment = attachEscrowCreation(pending.experimentSlug, contractId, transactionHash);
     }
 
-    if (input.experimentSlug && input.operation === "fund_escrow") {
-      experiment = attachEscrowFunding(input.experimentSlug, input.amount ?? 0, transactionHash);
+    if (pending.operation === "fund_escrow") {
+      if (!pending.amount) return ok({ error: "Pending fund transaction is missing amount" }, { status: 400 });
+      experiment = attachEscrowFunding(pending.experimentSlug, pending.amount, transactionHash);
     }
 
-    if (input.experimentSlug && input.operation === "complete_milestone" && input.milestoneId) {
-      experiment = markMilestoneCompleteLocally(input.experimentSlug, input.milestoneId, transactionHash);
+    if (pending.operation === "complete_milestone") {
+      if (!pending.milestoneId) return ok({ error: "Pending complete transaction is missing milestone ID" }, { status: 400 });
+      experiment = markMilestoneCompleteLocally(pending.experimentSlug, pending.milestoneId, transactionHash);
     }
 
-    if (input.experimentSlug && input.operation === "approve_milestone" && input.milestoneId) {
-      experiment = approveMilestoneLocally(input.experimentSlug, input.milestoneId, transactionHash);
+    if (pending.operation === "approve_milestone") {
+      if (!pending.milestoneId) return ok({ error: "Pending approve transaction is missing milestone ID" }, { status: 400 });
+      experiment = approveMilestoneLocally(pending.experimentSlug, pending.milestoneId, transactionHash);
     }
 
-    if (input.experimentSlug && input.operation === "release_milestone" && input.milestoneId) {
-      experiment = releaseMilestoneLocally(input.experimentSlug, input.milestoneId, transactionHash);
+    if (pending.operation === "release_milestone") {
+      if (!pending.milestoneId) return ok({ error: "Pending release transaction is missing milestone ID" }, { status: 400 });
+      experiment = releaseMilestoneLocally(pending.experimentSlug, pending.milestoneId, transactionHash);
     }
 
     return ok({
-      operation: input.operation,
+      operation: pending.operation,
+      pendingTransactionId: pending.id,
       transaction: tx,
       experiment,
     });
   } catch (error) {
     return errorResponse(error);
   }
+}
+
+function demoContractIdForCreate(pendingTransactionId: string): string | undefined {
+  if (process.env.OPENLAB_ESCROW_MODE !== "demo") return undefined;
+  return `demo_contract_${pendingTransactionId.replace(/^ptx_/, "")}`;
 }

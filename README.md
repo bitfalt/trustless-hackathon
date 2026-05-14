@@ -146,13 +146,15 @@ Request:
 Response includes:
 
 - `operation: "create_escrow"`
+- `pendingTransactionId` — required when submitting the signed XDR
+- `pendingTransactionExpiresAt`
 - `payload`
 - `unsignedTransaction`
 - `raw`
 
 ### `POST /api/escrow/fund`
 
-Returns unsigned XDR to fund a deployed multi-release escrow.
+Returns unsigned XDR to fund a deployed multi-release escrow. The amount is required and must not exceed the experiment's remaining funding target.
 
 Request:
 
@@ -167,42 +169,20 @@ Request:
 
 ### `POST /api/escrow/send-transaction`
 
-Submits signed XDR through Trustless Work and optionally updates local OpenLab state.
+Submits signed XDR through Trustless Work and updates local OpenLab state using the server-side `pendingTransactionId` created by the unsigned-XDR route. The frontend should not send operation, amount, milestone ID, or contract metadata here; those are stored server-side to avoid false local state.
 
-Request after create escrow:
-
-```json
-{
-  "signedXdr": "AAAA...SIGNED",
-  "experimentSlug": "waterwatch-costa-rica",
-  "operation": "create_escrow",
-  "expectedContractId": "C...IF_PROVIDER_DOES_NOT_RETURN_ONE"
-}
-```
-
-Request after funding:
+Request:
 
 ```json
 {
   "signedXdr": "AAAA...SIGNED",
-  "experimentSlug": "waterwatch-costa-rica",
-  "operation": "fund_escrow",
-  "amount": 1000
+  "pendingTransactionId": "ptx_..."
 }
 ```
 
-Request after milestone approval/release:
+The pending transaction is consumed exactly once and expires after 15 minutes. For create-escrow transactions, the backend only attaches the contract ID if Trustless Work returns it; demo mode generates a clearly labeled demo contract ID.
 
-```json
-{
-  "signedXdr": "AAAA...SIGNED",
-  "experimentSlug": "waterwatch-costa-rica",
-  "operation": "approve_milestone",
-  "milestoneId": "waterwatch-methodology"
-}
-```
-
-Supported operations:
+Supported pending operations:
 
 - `create_escrow`
 - `fund_escrow`
@@ -248,7 +228,7 @@ Request:
 
 ### `POST /api/milestones/:id/approve`
 
-Calls Trustless Work `approve-milestone` and returns unsigned XDR for the verifier wallet. Trustless Work docs say multi-release funds are released immediately on approval.
+Calls Trustless Work `approve-milestone` and returns unsigned XDR for the verifier wallet. Trustless Work docs say multi-release funds are released immediately on approval, so after the signed approval transaction is submitted the backend marks the local milestone as `released`.
 
 Request:
 
@@ -284,9 +264,9 @@ A React frontend should:
 2. Render WaterWatch from `/api/experiments/waterwatch-costa-rica`.
 3. Call `/api/escrow/create` to get unsigned XDR.
 4. Sign unsigned XDR with the user's Stellar wallet.
-5. Send signed XDR to `/api/escrow/send-transaction` with the matching operation.
+5. Send signed XDR to `/api/escrow/send-transaction` with the returned `pendingTransactionId`.
 6. Use `/api/milestones/:id/submit-evidence` for team submissions.
-7. Use `/api/milestones/:id/complete` and `/api/milestones/:id/approve` for milestone lifecycle.
+7. Use `/api/milestones/:id/complete` and `/api/milestones/:id/approve` for milestone lifecycle. The route validates that `:id` matches the submitted milestone index and experiment escrow contract.
 8. Refresh the experiment after each signed transaction.
 
 ## Local development
@@ -303,6 +283,24 @@ npm test
 npm run typecheck
 npm run build
 ```
+
+## Local state persistence
+
+For hackathon reliability, local experiment state is persisted to a JSON file so evidence, escrow IDs, funding state, and milestone transitions survive a local server restart.
+
+Default file:
+
+```txt
+.openlab-data.json
+```
+
+Override it with:
+
+```txt
+OPENLAB_DATA_FILE=/absolute/path/to/openlab-data.json
+```
+
+This is suitable for local/demo deployments. For production, replace this repository layer with Supabase/Postgres while keeping the same domain/API contract.
 
 ## Real vs demo
 

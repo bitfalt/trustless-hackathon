@@ -3,6 +3,7 @@ import { z } from "zod";
 import { errorResponse, ok, readJson } from "@/lib/api";
 import { findExperimentBySlug } from "@/lib/experiments";
 import { createTrustlessWorkClientFromEnv } from "@/lib/trustless-work/client";
+import { createPendingTransaction } from "@/lib/pending-transactions";
 import { buildInitializeMultiReleaseEscrowPayload } from "@/lib/trustless-work/openlab-mapper";
 
 const schema = z.object({
@@ -28,10 +29,16 @@ export async function POST(request: Request) {
 
     const payload = buildInitializeMultiReleaseEscrowPayload(experiment, input);
     const result = await createTrustlessWorkClientFromEnv().initializeMultiReleaseEscrow(payload);
+    const pendingTransaction = createPendingTransaction({
+      operation: "create_escrow",
+      experimentSlug: input.experimentSlug,
+    });
 
     return ok({
       operation: "create_escrow",
       experimentSlug: input.experimentSlug,
+      pendingTransactionId: pendingTransaction.id,
+      pendingTransactionExpiresAt: pendingTransaction.expiresAt,
       payload,
       unsignedTransaction: result.unsignedTransaction,
       raw: result.raw,
