@@ -102,4 +102,24 @@ describe("TrustlessWorkClient", () => {
       }),
     );
   });
+
+  it("queries canonical escrow state by contract id", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify([{ contractId: "CONTRACT123" }]), { status: 200 }));
+    const client = new TrustlessWorkClient({
+      apiBaseUrl: "https://api.trustlesswork.com/",
+      apiKey: "secret-key",
+      fetcher,
+    });
+
+    const result = await client.getEscrowsByContractIds(["CONTRACT123"]);
+
+    expect(result).toEqual([{ contractId: "CONTRACT123" }]);
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.trustlesswork.com/helper/get-escrow-by-contract-ids?contractIds=CONTRACT123&validateOnChain=true",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({ "x-api-key": "secret-key" }),
+      }),
+    );
+  });
 });

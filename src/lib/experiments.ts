@@ -162,6 +162,11 @@ export function addEvidenceToMilestone(experimentSlug: string, milestoneId: stri
   const experiment = requireExperimentBySlug(experimentSlug);
   const milestone = requireMilestone(experiment, milestoneId);
 
+  const duplicate = evidence.find((newEvidence) => milestone.evidence.some((existing) => existing.id === newEvidence.id));
+  if (duplicate) {
+    throw new Error(`Evidence ID ${duplicate.id} already exists on milestone ${milestoneId}`);
+  }
+
   milestone.evidence.push(...evidence);
   milestone.status = "ready_for_review";
   milestone.trustlessWorkStatus = "Ready for verifier review";

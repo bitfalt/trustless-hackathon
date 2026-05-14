@@ -53,6 +53,22 @@ describe("OpenLab experiment domain", () => {
     expect(milestone?.evidence.map((item) => item.title)).toContain("Sampling plan");
   });
 
+  it("rejects duplicate evidence IDs on the same milestone", () => {
+    const evidence = {
+      id: "evidence-test-methodology",
+      type: "methodology" as const,
+      title: "Sampling plan",
+      url: "https://example.com/sampling-plan.pdf",
+      submittedAt: "2026-05-14T00:00:00.000Z",
+    };
+
+    addEvidenceToMilestone(waterWatchSlug, "waterwatch-methodology", [evidence]);
+
+    expect(() => addEvidenceToMilestone(waterWatchSlug, "waterwatch-methodology", [evidence])).toThrow(
+      /already exists/,
+    );
+  });
+
   it("treats Trustless Work multi-release approval as an immediate local release", () => {
     const released = approveMilestoneLocally(waterWatchSlug, "waterwatch-methodology", "tx-approve-1");
 

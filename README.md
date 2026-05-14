@@ -29,10 +29,12 @@ src/
       escrow/create/route.ts
       escrow/fund/route.ts
       escrow/send-transaction/route.ts
+      escrow/[contractId]/route.ts
       milestones/[id]/submit-evidence/route.ts
       milestones/[id]/complete/route.ts
       milestones/[id]/approve/route.ts
       milestones/[id]/release/route.ts
+      verifier/reviews/route.ts
   lib/
     api.ts
     experiments.ts
@@ -88,7 +90,7 @@ Required for real Trustless Work calls:
 
 ```txt
 TRUSTLESS_WORK_API_BASE_URL=https://api.trustlesswork.com
-TRUSTLESS_WORK_API_KEY=replace_with_trustless_work_api_key
+TRUSTLESS_WORK_API_KEY=***
 TRUSTLESS_WORK_NETWORK=testnet
 OPENLAB_PLATFORM_ADDRESS=replace_with_stellar_wallet
 OPENLAB_RELEASE_SIGNER_ADDRESS=replace_with_stellar_wallet
@@ -96,6 +98,8 @@ OPENLAB_DISPUTE_RESOLVER_ADDRESS=replace_with_stellar_wallet
 OPENLAB_USDC_TRUSTLINE_ADDRESS=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
 NEXT_PUBLIC_ESCROW_VIEWER_BASE_URL=https://viewer.trustlesswork.com
 ```
+
+`POST /api/escrow/create` now defaults `platformAddress`, `releaseSigner`, `disputeResolver`, and `trustline` from these env vars. The frontend only has to provide them explicitly if it needs to override the demo defaults.
 
 For local frontend development without a Trustless Work key, set:
 
@@ -125,7 +129,7 @@ curl http://localhost:3000/api/experiments/waterwatch-costa-rica
 
 Builds a Trustless Work multi-release escrow payload and returns unsigned XDR for wallet signing.
 
-Request:
+Request. `platformAddress`, `releaseSigner`, `disputeResolver`, and `trustline` are optional if the corresponding `OPENLAB_*` env vars are configured:
 
 ```json
 {
@@ -189,6 +193,28 @@ Supported pending operations:
 - `complete_milestone`
 - `approve_milestone`
 - `release_milestone`
+
+### `GET /api/escrow/:contractId`
+
+Queries Trustless Work for canonical escrow state with `validateOnChain=true` by default.
+
+Example:
+
+```bash
+curl http://localhost:3000/api/escrow/C...CONTRACT_ID
+```
+
+Pass `?validateOnChain=false` only when you need a faster non-chain-validated read.
+
+### `GET /api/verifier/reviews`
+
+Returns pending verifier review items assembled from local OpenLab state. This is the backend surface for the verifier dashboard UI.
+
+Example:
+
+```bash
+curl http://localhost:3000/api/verifier/reviews
+```
 
 ### `POST /api/milestones/:id/submit-evidence`
 
@@ -266,8 +292,10 @@ A React frontend should:
 4. Sign unsigned XDR with the user's Stellar wallet.
 5. Send signed XDR to `/api/escrow/send-transaction` with the returned `pendingTransactionId`.
 6. Use `/api/milestones/:id/submit-evidence` for team submissions.
-7. Use `/api/milestones/:id/complete` and `/api/milestones/:id/approve` for milestone lifecycle. The route validates that `:id` matches the submitted milestone index and experiment escrow contract.
-8. Refresh the experiment after each signed transaction.
+7. Use `/api/verifier/reviews` to populate the verifier dashboard.
+8. Use `/api/milestones/:id/complete` and `/api/milestones/:id/approve` for milestone lifecycle. The route validates that `:id` matches the submitted milestone index and experiment escrow contract.
+9. Use `/api/escrow/:contractId` when the UI needs canonical Trustless Work escrow state.
+10. Refresh the experiment after each signed transaction.
 
 ## Local development
 

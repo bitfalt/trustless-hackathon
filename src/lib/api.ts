@@ -4,13 +4,27 @@ import { z } from "zod";
 import { TrustlessWorkApiError } from "@/lib/trustless-work/client";
 
 export const evidenceSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().min(1).max(120),
   type: z.enum(["methodology", "photo", "dataset", "report", "receipt"]),
-  title: z.string().min(1),
-  url: z.string().url(),
+  title: z.string().min(1).max(160),
+  url: z
+    .string()
+    .min(1)
+    .refine((url) => isAllowedEvidenceUrl(url), "Evidence URL must use https:// or ipfs://"),
   submittedAt: z.string().datetime().optional(),
-  notes: z.string().optional(),
+  notes: z.string().max(1000).optional(),
 });
+
+function isAllowedEvidenceUrl(url: string): boolean {
+  if (url.startsWith("ipfs://")) return url.length > "ipfs://".length;
+  if (!url.startsWith("https://")) return false;
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function readJson<T extends z.ZodTypeAny>(request: Request, schema: T): Promise<z.infer<T>> {
   const body = await request.json().catch(() => undefined);

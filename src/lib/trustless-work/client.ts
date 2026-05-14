@@ -63,6 +63,14 @@ export class TrustlessWorkClient {
     return this.postUnsigned("/escrow/multi-release/release-milestone", payload);
   }
 
+  getEscrowsByContractIds(contractIds: string[], validateOnChain = true): Promise<unknown> {
+    const params = new URLSearchParams({
+      contractIds: contractIds.join(","),
+      validateOnChain: String(validateOnChain),
+    });
+    return this.get(`/helper/get-escrow-by-contract-ids?${params.toString()}`);
+  }
+
   async sendTransaction(payload: SendTransactionPayload): Promise<SendTransactionResponse> {
     if (this.demoMode) {
       return {
@@ -107,6 +115,20 @@ export class TrustlessWorkClient {
   }
 
   private async post<T>(endpoint: string, payload: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  private async get<T>(endpoint: string): Promise<T> {
+    if (this.demoMode) {
+      return { mode: "demo", endpoint, escrows: [] } as T;
+    }
+    return this.request<T>(endpoint, { method: "GET" });
+  }
+
+  private async request<T>(endpoint: string, init: RequestInit): Promise<T> {
     if (!this.apiKey) {
       throw new TrustlessWorkApiError(
         "TRUSTLESS_WORK_API_KEY is required for real Trustless Work calls. Use OPENLAB_ESCROW_MODE=demo for local UI testing.",
@@ -115,12 +137,12 @@ export class TrustlessWorkClient {
     }
 
     const response = await this.fetcher(`${this.apiBaseUrl}${endpoint}`, {
-      method: "POST",
+      ...init,
       headers: {
         "Content-Type": "application/json",
         "x-api-key": this.apiKey,
+        ...init.headers,
       },
-      body: JSON.stringify(payload),
     });
 
     const data = await response.json().catch(() => ({}));
