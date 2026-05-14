@@ -1,0 +1,38 @@
+import { z } from "zod";
+
+import { errorResponse, ok, readJson } from "@/lib/api";
+import { findExperimentBySlug } from "@/lib/experiments";
+import { createTrustlessWorkClientFromEnv } from "@/lib/trustless-work/client";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+const schema = z.object({
+  experimentSlug: z.string().min(1),
+  contractId: z.string().min(1),
+  approver: z.string().min(1),
+  milestoneIndex: z.union([z.number().int().min(0), z.string().min(1)]),
+});
+
+export async function POST(request: Request, context: RouteContext) {
+  try {
+    const params = await context.params;
+    const input = await readJson(request, schema);
+    if (!findExperimentBySlug(input.experimentSlug)) return ok({ error: "Experiment not found" }, { status: 404 });
+
+    const result = await createTrustlessWorkClientFromEnv().approveMilestone({
+      contractId: input.contractId,
+      approver: input.approver,
+      milestoneIndex: String(input.milestoneIndex),
+    });
+
+    return ok({
+      operation: "approve_milestone",
+      milestoneId: params.id,
+      experimentSlug: input.experimentSlug,
+      unsignedTransaction: result.unsignedTransaction,
+      raw: result.raw,
+    });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
