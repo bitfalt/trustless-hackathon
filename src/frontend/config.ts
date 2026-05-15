@@ -98,7 +98,7 @@ export interface WorkDetailConfig {
 export const siteConfig: SiteConfig = {
   language: "en",
   title: "EcoProof — Fund and Verify Real-World Science Experiments",
-  description: "EcoProof (OpenLab) helps schools, students, and communities launch scientific experiments, collect evidence, receive public funding, and unlock milestone-based payments through trustless verification.",
+  description: "EcoProof helps schools, students, and communities launch scientific experiments, collect evidence, receive public funding, and unlock milestone-based payments through trustless verification.",
   brandName: "EcoProof",
 }
 
@@ -109,10 +109,10 @@ export const heroConfig: HeroConfig = {
   subtitleLines: [
     "Global scientific experiments funded and verified by the public.",
     "Schools, students, and communities launch real-world science.",
-    "Trustless milestones. AI-powered research. Public goods funding.",
+    "Trustless milestones. Public goods funding. Open evidence.",
   ],
   ctaLabel: "Launch an Experiment",
-  roomLabel: "OpenLab v1.0 // Citizen Science Protocol",
+  roomLabel: "EcoProof v1.0 // Citizen Science Protocol",
   fluidImagePath: "/images/hero-bg.jpg",
 }
 
@@ -128,30 +128,7 @@ export const galleryConfig: GalleryConfig = {
     { label: "Escrow", value: "Trustless Work" },
   ],
   sideLabel: "ECOPROOF::LIVE_01",
-  works: [
-    {
-      id: "community-water-quality-study",
-      slug: "community-water-quality-study",
-      title: "Community Water Quality Study",
-      type: "citizen-science",
-      status: "READY FOR ESCROW",
-      metrics: "0/300 USDC",
-      image: "/images/project-water-costa-rica.jpg",
-      artist: "Community Water Lab",
-      location: "Cartago, Costa Rica",
-      medium: "Water sampling, field measurements, public evidence report",
-      fundingGoal: 300,
-      fundedAmount: 0,
-      currency: "USDC",
-      escrowMode: "real",
-      escrowBalance: 0,
-      article: "A community team in Cartago is measuring local water quality and publishing evidence for residents. The experiment uses two Trustless Work milestones of 150 USDC each: first, the sampling protocol is verified; second, the field dataset and public report are published.\n\nThis is the live demo project shape. When submitted from the Start flow, EcoProof creates the Trustless Work escrow immediately and records the resulting contract ID for inspection in the Trustless Work Viewer.",
-      milestones: [
-        { id: "community-water-quality-study-milestone-1", index: 0, title: "Sampling plan verified", amount: 150, status: "locked", evidenceCount: 0 },
-        { id: "community-water-quality-study-milestone-2", index: 1, title: "Open water report published", amount: 150, status: "locked", evidenceCount: 0 },
-      ],
-    },
-  ],
+  works: [],
 }
 
 // ── Instant / Final CTA Config ───────────────────────────
@@ -159,7 +136,7 @@ export const galleryConfig: GalleryConfig = {
 export const instantConfig: InstantConfig = {
   textLines: ["EcoProof", "Turn local curiosity into verified public science.", "Join the next generation of citizen scientists."],
   videoPath: "/videos/ambient-science.mp4",
-  roomLabel: "OpenLab Protocol // v1.0",
+  roomLabel: "EcoProof Protocol // v1.0",
 }
 
 // ── Footer Config ────────────────────────────────────────
@@ -169,20 +146,19 @@ export const footerConfig: FooterConfig = {
   taglineLines: ["GLOBAL SCIENCE", "PUBLIC GOODS", "TRUSTLESS VERIFICATION"],
   navigationHeading: "NAVIGATION",
   navigationLinks: [
-    { label: "How It Works" },
-    { label: "Projects" },
-    { label: "Trustless Work" },
-    { label: "AI Lab" },
-    { label: "Community" },
+    { label: "How It Works", href: "/#how-it-works" },
+    { label: "Projects", href: "/#projects" },
+    { label: "Trustless Work", href: "https://trustlesswork.com" },
+    { label: "Start", href: "/experiments/new" },
+    { label: "Community", href: "/#community" },
   ],
   contactHeading: "CONNECT",
   contactLinks: [
-    { label: "hello@ecoproof.io" },
-    { label: "GitHub" },
-    { label: "Discord" },
-    { label: "Twitter/X" },
+    { label: "hello@ecoproof.io", href: "mailto:hello@ecoproof.io" },
+    { label: "GitHub", href: "https://github.com/Trustless-Work" },
+    { label: "Viewer", href: "https://viewer.trustlesswork.com/" },
   ],
-  copyright: "© 2025 EcoProof / OpenLab",
+  copyright: "© 2026 EcoProof",
   creditText: "BUILT FOR PUBLIC GOODS",
 }
 
@@ -195,12 +171,7 @@ export const workDetailConfig: WorkDetailConfig = {
   mediumLabel: "METHOD",
   backToGalleryLabel: "\u2190 BACK TO PROJECTS",
   metaRoomSuffix: "LAB",
-  footerNote: "EcoProof OpenLab Protocol",
+  footerNote: "EcoProof Protocol",
   notFoundTitle: "PROJECT NOT FOUND",
   notFoundLink: "\u2190 RETURN HOME",
 }
-
-// Helper map for WorkDetail lookups
-export const worksById: Record<string, WorkItem> = Object.fromEntries(
-  galleryConfig.works.map((w) => [w.id.toLowerCase(), w]),
-)

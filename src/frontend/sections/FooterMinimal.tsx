@@ -1,5 +1,9 @@
 import { footerConfig } from '../config'
 
+function isExternal(href?: string) {
+  return Boolean(href && /^(https?:|mailto:)/.test(href))
+}
+
 export default function FooterMinimal() {
   return (
     <footer style={{ position: 'relative', zIndex: 2, background: '#050505', borderTop: '1px solid rgba(255,255,255,0.04)', padding: '48px clamp(24px, 6vw, 80px)' }}>
@@ -13,9 +17,30 @@ export default function FooterMinimal() {
 
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
           {footerConfig.navigationLinks.map((link) => (
-            <span key={link.label} style={{ fontFamily: '"Inter", sans-serif', fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', transition: 'color 0.2s ease' }}>
+            <a
+              key={link.label}
+              href={link.href}
+              target={isExternal(link.href) ? '_blank' : undefined}
+              rel={isExternal(link.href) ? 'noreferrer' : undefined}
+              style={{ fontFamily: '"Inter", sans-serif', fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', transition: 'color 0.2s ease', textDecoration: 'none' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
+            >
               {link.label}
-            </span>
+            </a>
+          ))}
+          {footerConfig.contactLinks.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              target={isExternal(link.href) && !link.href?.startsWith('mailto:') ? '_blank' : undefined}
+              rel={isExternal(link.href) && !link.href?.startsWith('mailto:') ? 'noreferrer' : undefined}
+              style={{ fontFamily: '"Inter", sans-serif', fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', transition: 'color 0.2s ease', textDecoration: 'none' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
+            >
+              {link.label}
+            </a>
           ))}
         </div>
 

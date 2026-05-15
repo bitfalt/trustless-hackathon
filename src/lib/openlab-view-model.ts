@@ -61,7 +61,7 @@ export function experimentToProjectCard(experiment: Experiment): ProjectCardView
     type: experiment.category.toLowerCase(),
     status: experiment.status.toUpperCase().replaceAll("_", " "),
     metrics: `${experiment.fundedAmount}/${experiment.fundingGoal} ${experiment.currency}`,
-    image: imageByCategory[experiment.category] ?? "/images/project-biodiversity.jpg",
+    image: experiment.imageUrl ?? imageByCategory[experiment.category] ?? "/images/project-biodiversity.jpg",
     artist: experiment.team.name,
     location: experiment.location,
     medium: experiment.methodology,

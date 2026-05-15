@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { Lightbulb, Cpu, HandCoins, Lock, ClipboardCheck, BookOpen } from 'lucide-react'
+import { Lightbulb, ClipboardList, HandCoins, Lock, ClipboardCheck, BookOpen } from 'lucide-react'
 
 const STEPS = [
   { icon: Lightbulb, num: '01', title: 'Submit an idea', desc: 'Upload your experiment proposal and scientific question.' },
-  { icon: Cpu, num: '02', title: 'AI designs the method', desc: 'Our AI assistant refines questions and builds protocols.' },
+  { icon: ClipboardList, num: '02', title: 'Define the method', desc: 'Set the protocol, verifier, release signer, and milestone budget.' },
   { icon: HandCoins, num: '03', title: 'Community funds it', desc: 'Supporters back experiments aligned with their values.' },
   { icon: Lock, num: '04', title: 'Funds lock in escrow', desc: 'Trustless Work protects every contribution.' },
   { icon: ClipboardCheck, num: '05', title: 'Verify & release', desc: 'Valid evidence triggers automatic milestone payments.' },

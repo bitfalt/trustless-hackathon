@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { FlaskConical, Globe, ShieldCheck, Brain, Lock, Award } from 'lucide-react'
+import { FlaskConical, Globe, ShieldCheck, FileCheck2, Lock, Award } from 'lucide-react'
 
 const FEATURES = [
   {
     icon: FlaskConical,
     title: 'Create Experiments',
-    desc: 'Students and communities define a scientific question, methodology, and milestones with AI assistance.',
+    desc: 'Students and communities define a scientific question, methodology, and measurable milestones.',
   },
   {
     icon: Globe,
@@ -18,9 +18,9 @@ const FEATURES = [
     desc: 'Deliverables are reviewed and payments released only when valid proof is submitted on-chain.',
   },
   {
-    icon: Brain,
-    title: 'AI Research Partner',
-    desc: 'Our AI assistant helps refine questions, design protocols, analyze data, and write reports.',
+    icon: FileCheck2,
+    title: 'Public Research Records',
+    desc: 'Experiment plans, evidence, approvals, and reports stay inspectable from the project page.',
   },
   {
     icon: Lock,

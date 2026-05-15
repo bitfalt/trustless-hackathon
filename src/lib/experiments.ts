@@ -16,6 +16,7 @@ const seededExperiments: Experiment[] = [
     summary: "A community team measures water quality and publishes evidence for local residents.",
     problem: "Residents need transparent local water quality data before they can advocate for remediation.",
     methodology: "The team collects scheduled samples, records field measurements, uploads raw evidence, and publishes an open report.",
+    imageUrl: "/images/project-water-costa-rica.jpg",
     fundingGoal: 300,
     fundedAmount: 0,
     currency: "USDC",
@@ -75,6 +76,7 @@ export type CreateExperimentInput = {
   summary: string;
   problem: string;
   methodology: string;
+  imageUrl?: string;
   fundingGoal: number;
   creatorWallet: string;
   approverWallet: string;
@@ -124,6 +126,7 @@ export function createExperiment(input: CreateExperimentInput): Experiment {
     summary: input.summary,
     problem: input.problem,
     methodology: input.methodology,
+    imageUrl: input.imageUrl,
     fundingGoal: input.fundingGoal,
     fundedAmount: 0,
     currency: "USDC",
@@ -304,7 +307,6 @@ export function attachEscrowFunding(
 
 export function resetExperimentsForTests(): void {
   experiments = clone(seededExperiments);
-  persistExperiments();
 }
 
 export function validateMilestoneOperation(input: {

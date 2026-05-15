@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
-import { galleryConfig, workDetailConfig, type WorkItem } from '../config'
+import { workDetailConfig, type WorkItem } from '../config'
 import { useOpenLabProjects } from '../openlab-projects'
 import { shortWallet, useWallet } from '../wallet'
 
@@ -17,7 +17,7 @@ type ApiResult = {
 export default function WorkDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { projects, reloadProjects } = useOpenLabProjects()
+  const { projects, isLoading, reloadProjects } = useOpenLabProjects()
   const { address, signTransaction } = useWallet()
   const [isBusy, setIsBusy] = useState(false)
   const [lastResult, setLastResult] = useState<string>()
@@ -26,7 +26,7 @@ export default function WorkDetail() {
   const worksById = useMemo(
     () =>
       Object.fromEntries(
-        [...projects, ...galleryConfig.works].flatMap((w) => [
+        projects.flatMap((w) => [
           [w.id.toLowerCase(), w],
           ...(w.slug ? [[w.slug.toLowerCase(), w] as const] : []),
         ]),
@@ -168,6 +168,26 @@ export default function WorkDetail() {
     return submitSignedTransaction(pending.unsignedTransaction!, pending.pendingTransactionId!)
   }
 
+  if (isLoading && !work) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#000',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: '"Geist Mono", monospace',
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+        }}
+      >
+        Loading project...
+      </div>
+    )
+  }
+
   if (!work) {
     return (
       <div
@@ -279,6 +299,7 @@ export default function WorkDetail() {
           <img
             src={work.image}
             alt={work.title}
+            onError={(event) => { event.currentTarget.src = '/images/project-water-costa-rica.jpg' }}
             style={{
               width: '100%',
               height: '100%',

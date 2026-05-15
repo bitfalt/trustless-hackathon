@@ -20,6 +20,7 @@ export default function NewExperiment() {
     summary: 'A community team measures water quality and publishes evidence for local residents.',
     problem: 'Residents need transparent local water quality data before they can advocate for remediation.',
     methodology: 'The team collects scheduled samples, records field measurements, uploads raw evidence, and publishes an open report.',
+    imageUrl: '/images/project-water-costa-rica.jpg',
     fundingGoal: 300,
     approverWallet: '',
     releaseSignerWallet: '',
@@ -132,6 +133,7 @@ export default function NewExperiment() {
         <TextArea label="Summary" value={form.summary} onChange={(value) => setForm({ ...form, summary: value })} />
         <TextArea label="Problem" value={form.problem} onChange={(value) => setForm({ ...form, problem: value })} />
         <TextArea label="Methodology" value={form.methodology} onChange={(value) => setForm({ ...form, methodology: value })} />
+        <Field label="Project Image URL" value={form.imageUrl} placeholder="/images/project-water-costa-rica.jpg or https://..." onChange={(value) => setForm({ ...form, imageUrl: value })} />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
           <Field label="Verifier Wallet" value={form.approverWallet} placeholder="Defaults to connected wallet" onChange={(value) => setForm({ ...form, approverWallet: value })} />

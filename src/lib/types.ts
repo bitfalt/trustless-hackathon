@@ -63,6 +63,7 @@ export type Experiment = {
   summary: string;
   problem: string;
   methodology: string;
+  imageUrl?: string;
   fundingGoal: number;
   fundedAmount: number;
   currency: "USDC";

@@ -41,6 +41,22 @@ export default function ProjectsExplorer() {
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }} className="proj-grid">
+          {projects.length === 0 && (
+            <div
+              className="reveal"
+              style={{
+                gridColumn: '1 / -1',
+                border: '1px solid rgba(255,255,255,0.08)',
+                padding: '24px',
+                color: 'rgba(255,255,255,0.55)',
+                fontFamily: '"Inter", sans-serif',
+                fontSize: '0.92rem',
+                lineHeight: 1.55,
+              }}
+            >
+              No submitted experiments yet. Start a project to create a live Trustless Work escrow and it will appear here.
+            </div>
+          )}
           {projects.slice(0, 12).map((work, i) => (
             <div
               key={work.id}
@@ -55,6 +71,7 @@ export default function ProjectsExplorer() {
                   src={work.image}
                   alt={work.title}
                   loading="lazy"
+                  onError={(event) => { event.currentTarget.src = '/images/project-water-costa-rica.jpg' }}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.4s ease', filter: 'contrast(0.95) saturate(0.9)' }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.04)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}

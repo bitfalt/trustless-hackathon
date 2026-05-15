@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { galleryConfig, type WorkItem } from "./config";
+import type { WorkItem } from "./config";
 
 type ProjectResponse = {
   projects?: WorkItem[];
@@ -16,13 +16,13 @@ type OpenLabProjectsContextValue = {
 };
 
 const OpenLabProjectsContext = createContext<OpenLabProjectsContextValue>({
-  projects: galleryConfig.works,
+  projects: [],
   isLoading: true,
   reloadProjects: async () => undefined,
 });
 
 export function OpenLabProjectsProvider({ children }: { children: ReactNode }) {
-  const [projects, setProjects] = useState<WorkItem[]>(galleryConfig.works);
+  const [projects, setProjects] = useState<WorkItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
 
@@ -32,9 +32,7 @@ export function OpenLabProjectsProvider({ children }: { children: ReactNode }) {
       const response = await fetch("/api/experiments", { headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error(`Failed to load projects (${response.status})`);
       const data = (await response.json()) as ProjectResponse;
-      if (data.projects && data.projects.length > 0) {
-        setProjects(data.projects);
-      }
+      setProjects(data.projects ?? []);
       setError(undefined);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load projects");

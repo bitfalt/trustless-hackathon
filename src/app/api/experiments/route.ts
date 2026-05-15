@@ -11,6 +11,7 @@ const createExperimentSchema = z.object({
   summary: z.string().min(20).max(500),
   problem: z.string().min(20).max(1000),
   methodology: z.string().min(20).max(1000),
+  imageUrl: z.string().min(1).max(2000).optional(),
   fundingGoal: z.number().positive(),
   creatorWallet: z.string().min(1),
   approverWallet: z.string().min(1),
