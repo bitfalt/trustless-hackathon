@@ -43,6 +43,11 @@ export type EscrowMetadata = {
   createdTransactionHash?: string;
   fundedTransactionHash?: string;
   balance?: number;
+  serviceProviderWallet?: string;
+  approverWallet?: string;
+  releaseSignerWallet?: string;
+  platformWallet?: string;
+  disputeResolverWallet?: string;
   lastOperation?: string;
   lastTransactionHash?: string;
   network: "testnet" | "mainnet";
@@ -63,6 +68,7 @@ export type Experiment = {
   currency: "USDC";
   status: ExperimentStatus;
   escrowType: "multi-release";
+  creatorWallet?: string;
   escrowContractId?: string;
   escrowViewerUrl?: string;
   escrow: EscrowMetadata;

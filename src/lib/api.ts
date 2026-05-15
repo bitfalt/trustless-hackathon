@@ -59,6 +59,13 @@ export function errorResponse(error: unknown) {
 function inferStatusFromMessage(message: string): number {
   if (message.includes("not found") || message.includes("Not found")) return 404;
   if (
+    message.includes("Connected wallet is required") ||
+    message.includes("Connected wallet is not the") ||
+    message.includes("must match the connected")
+  ) {
+    return 403;
+  }
+  if (
     message.includes("does not match") ||
     message.includes("exceeds remaining funding") ||
     message.includes("must be positive") ||

@@ -18,6 +18,13 @@ export type PendingTransaction = {
   milestoneId?: string;
   milestoneIndex?: number;
   amount?: number;
+  roles?: {
+    serviceProviderWallet?: string;
+    approverWallet?: string;
+    releaseSignerWallet?: string;
+    platformWallet?: string;
+    disputeResolverWallet?: string;
+  };
   createdAt: string;
   expiresAt: string;
   consumedAt?: string;

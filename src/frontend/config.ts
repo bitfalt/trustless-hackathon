@@ -32,6 +32,14 @@ export interface WorkItem {
   escrowViewerUrl?: string
   escrowMode?: "real" | "demo"
   escrowBalance?: number
+  creatorWallet?: string
+  roles?: {
+    serviceProvider?: string
+    approver?: string
+    releaseSigner?: string
+    platform?: string
+    disputeResolver?: string
+  }
   milestones?: Array<{
     id: string
     index: number

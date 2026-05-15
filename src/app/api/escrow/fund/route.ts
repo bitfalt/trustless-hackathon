@@ -10,6 +10,7 @@ const schema = z.object({
   contractId: z.string().min(1),
   signer: z.string().min(1),
   amount: z.union([z.number().positive(), z.string().min(1)]),
+  walletAddress: z.string().min(1).optional(),
 });
 
 export async function POST(request: Request) {
@@ -17,6 +18,9 @@ export async function POST(request: Request) {
     const input = await readJson(request, schema);
     const experiment = findExperimentBySlug(input.experimentSlug);
     if (!experiment) return ok({ error: "Experiment not found" }, { status: 404 });
+    if ((input.walletAddress ?? input.signer).toUpperCase() !== input.signer.toUpperCase()) {
+      return ok({ error: "Signer must match the connected wallet" }, { status: 403 });
+    }
 
     const amount = String(input.amount);
     const amountNumber = Number(input.amount);

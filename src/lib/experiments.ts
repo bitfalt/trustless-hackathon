@@ -141,6 +141,26 @@ const seededExperiments: Experiment[] = [
 
 let experiments = loadExperiments();
 
+export type CreateExperimentInput = {
+  title: string;
+  location: string;
+  category: Experiment["category"];
+  summary: string;
+  problem: string;
+  methodology: string;
+  fundingGoal: number;
+  creatorWallet: string;
+  approverWallet: string;
+  releaseSignerWallet: string;
+  disputeResolverWallet: string;
+  milestones: Array<{
+    title: string;
+    description: string;
+    amount: number;
+    deliverables: string[];
+  }>;
+};
+
 export function getExperiments(): Experiment[] {
   return clone(experiments);
 }
@@ -156,6 +176,76 @@ export function requireExperimentBySlug(slug: string): Experiment {
     throw new Error(`Experiment not found: ${slug}`);
   }
   return experiment;
+}
+
+export function createExperiment(input: CreateExperimentInput): Experiment {
+  if (experiments.some((experiment) => experiment.slug === slugify(input.title))) {
+    throw new Error(`Experiment already exists: ${slugify(input.title)}`);
+  }
+
+  const totalMilestoneAmount = input.milestones.reduce((sum, milestone) => sum + milestone.amount, 0);
+  if (Math.abs(totalMilestoneAmount - input.fundingGoal) > 0.000001) {
+    throw new Error("Milestone amounts must add up to the funding goal");
+  }
+
+  const slug = slugify(input.title);
+  const experiment: Experiment = {
+    id: `exp-${slug}`,
+    title: input.title,
+    slug,
+    location: input.location,
+    category: input.category,
+    summary: input.summary,
+    problem: input.problem,
+    methodology: input.methodology,
+    fundingGoal: input.fundingGoal,
+    fundedAmount: 0,
+    currency: "USDC",
+    status: "draft",
+    escrowType: "multi-release",
+    creatorWallet: input.creatorWallet,
+    escrow: {
+      type: "multi-release",
+      engagementId: `openlab-${slug}`,
+      network: testnet,
+      mode: process.env.TRUSTLESS_WORK_API_KEY && process.env.OPENLAB_ESCROW_MODE !== "demo" ? "real" : "demo",
+      balance: 0,
+      serviceProviderWallet: input.creatorWallet,
+      approverWallet: input.approverWallet,
+      releaseSignerWallet: input.releaseSignerWallet,
+      disputeResolverWallet: input.disputeResolverWallet,
+    },
+    team: {
+      name: input.title,
+      type: "community",
+      walletAddress: input.creatorWallet,
+    },
+    verifier: {
+      name: "Connected verifier",
+      role: "Milestone approver",
+      walletAddress: input.approverWallet,
+    },
+    disputeResolver: {
+      name: "Connected dispute resolver",
+      walletAddress: input.disputeResolverWallet,
+    },
+    milestones: input.milestones.map((milestone, index) => ({
+      id: `${slug}-milestone-${index + 1}`,
+      index,
+      title: milestone.title,
+      description: milestone.description,
+      releasePercent: Math.round((milestone.amount / input.fundingGoal) * 100),
+      amount: milestone.amount,
+      receiver: input.creatorWallet,
+      status: "locked",
+      deliverables: milestone.deliverables,
+      evidence: [],
+    })),
+  };
+
+  experiments.unshift(experiment);
+  persistExperiments();
+  return clone(experiment);
 }
 
 export function addEvidenceToMilestone(experimentSlug: string, milestoneId: string, evidence: Evidence[]): Experiment {
@@ -177,6 +267,19 @@ export function addEvidenceToMilestone(experimentSlug: string, milestoneId: stri
 
   persistExperiments();
   return clone(experiment);
+}
+
+export function assertExperimentRole(
+  experiment: Experiment,
+  walletAddress: string | undefined,
+  role: "creator" | "serviceProvider" | "approver" | "releaseSigner",
+): void {
+  if (!walletAddress) throw new Error("Connected wallet is required for this action");
+  const normalizedWallet = walletAddress.toUpperCase();
+  const expected = roleAddress(experiment, role)?.toUpperCase();
+  if (!expected || normalizedWallet !== expected) {
+    throw new Error(`Connected wallet is not the ${role} for this escrow`);
+  }
 }
 
 export function markMilestoneCompleteLocally(
@@ -224,6 +327,7 @@ export function attachEscrowCreation(
   contractId: string,
   transactionHash?: string,
   mode?: EscrowMetadata["mode"],
+  roles?: Partial<Pick<EscrowMetadata, "serviceProviderWallet" | "approverWallet" | "releaseSignerWallet" | "platformWallet" | "disputeResolverWallet">>,
 ): Experiment {
   const experiment = requireExperimentBySlug(experimentSlug);
   const viewerUrl = buildViewerUrl(contractId);
@@ -234,6 +338,7 @@ export function attachEscrowCreation(
     contractId,
     viewerUrl,
     mode: mode ?? experiment.escrow.mode,
+    ...roles,
     createdTransactionHash: transactionHash,
     lastOperation: "create_escrow",
     lastTransactionHash: transactionHash,
@@ -335,7 +440,7 @@ function dataFilePath(): string {
 
 function loadExperiments(): Experiment[] {
   const filePath = dataFilePath();
-  if (!existsSync(filePath)) return clone(seededExperiments);
+  if (!existsSync(filePath)) return shouldUseSeededExperiments() ? clone(seededExperiments) : [];
 
   try {
     const parsed = JSON.parse(readFileSync(filePath, "utf8")) as { experiments?: Experiment[] };
@@ -346,7 +451,7 @@ function loadExperiments(): Experiment[] {
     console.warn("Failed to load persisted OpenLab experiment state; using seeds", error);
   }
 
-  return clone(seededExperiments);
+  return shouldUseSeededExperiments() ? clone(seededExperiments) : [];
 }
 
 function persistExperiments(): void {
@@ -361,4 +466,28 @@ function persistExperiments(): void {
 
 function clone<T>(value: T): T {
   return structuredClone(value);
+}
+
+function roleAddress(experiment: Experiment, role: "creator" | "serviceProvider" | "approver" | "releaseSigner") {
+  switch (role) {
+    case "creator":
+    case "serviceProvider":
+      return experiment.escrow.serviceProviderWallet ?? experiment.team.walletAddress ?? experiment.creatorWallet;
+    case "approver":
+      return experiment.escrow.approverWallet ?? experiment.verifier.walletAddress;
+    case "releaseSigner":
+      return experiment.escrow.releaseSignerWallet;
+  }
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function shouldUseSeededExperiments(): boolean {
+  return process.env.OPENLAB_ALLOW_SEEDED_EXPERIMENTS === "true" || !process.env.TRUSTLESS_WORK_API_KEY;
 }

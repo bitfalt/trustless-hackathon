@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { errorResponse, ok, readJson } from "@/lib/api";
-import { findExperimentBySlug } from "@/lib/experiments";
+import { assertExperimentRole, findExperimentBySlug } from "@/lib/experiments";
 import { createTrustlessWorkClientFromEnv } from "@/lib/trustless-work/client";
 import { createPendingTransaction } from "@/lib/pending-transactions";
 import { resolveCreateEscrowConfig } from "@/lib/openlab-config";
@@ -22,6 +22,7 @@ const schema = z.object({
     })
     .optional(),
   platformFee: z.number().min(0).optional(),
+  walletAddress: z.string().min(1).optional(),
 });
 
 export async function POST(request: Request) {
@@ -29,6 +30,10 @@ export async function POST(request: Request) {
     const input = await readJson(request, schema);
     const experiment = findExperimentBySlug(input.experimentSlug);
     if (!experiment) return ok({ error: "Experiment not found" }, { status: 404 });
+    if (experiment.creatorWallet) assertExperimentRole(experiment, input.walletAddress ?? input.signer, "creator");
+    if ((input.walletAddress ?? input.signer).toUpperCase() !== input.signer.toUpperCase()) {
+      return ok({ error: "Signer must match the connected wallet" }, { status: 403 });
+    }
 
     const resolvedInput = resolveCreateEscrowConfig(input);
     const payload = buildInitializeMultiReleaseEscrowPayload(experiment, resolvedInput);
@@ -36,6 +41,13 @@ export async function POST(request: Request) {
     const pendingTransaction = createPendingTransaction({
       operation: "create_escrow",
       experimentSlug: input.experimentSlug,
+      roles: {
+        serviceProviderWallet: resolvedInput.serviceProvider,
+        approverWallet: resolvedInput.approver,
+        releaseSignerWallet: resolvedInput.releaseSigner,
+        platformWallet: resolvedInput.platformAddress,
+        disputeResolverWallet: resolvedInput.disputeResolver,
+      },
     });
 
     return ok({

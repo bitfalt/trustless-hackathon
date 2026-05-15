@@ -19,6 +19,14 @@ export type ProjectCardView = {
   escrowViewerUrl?: string;
   escrowMode: "real" | "demo";
   escrowBalance?: number;
+  creatorWallet?: string;
+  roles: {
+    serviceProvider?: string;
+    approver?: string;
+    releaseSigner?: string;
+    platform?: string;
+    disputeResolver?: string;
+  };
   milestones: Array<{
     id: string;
     index: number;
@@ -65,6 +73,14 @@ export function experimentToProjectCard(experiment: Experiment): ProjectCardView
     escrowViewerUrl: experiment.escrow.viewerUrl ?? experiment.escrowViewerUrl,
     escrowMode: experiment.escrow.mode,
     escrowBalance: experiment.escrow.balance,
+    creatorWallet: experiment.creatorWallet,
+    roles: {
+      serviceProvider: experiment.escrow.serviceProviderWallet ?? experiment.team.walletAddress ?? experiment.creatorWallet,
+      approver: experiment.escrow.approverWallet ?? experiment.verifier.walletAddress,
+      releaseSigner: experiment.escrow.releaseSignerWallet,
+      platform: experiment.escrow.platformWallet,
+      disputeResolver: experiment.escrow.disputeResolverWallet ?? experiment.disputeResolver?.walletAddress,
+    },
     milestones: experiment.milestones.map((milestone) => ({
       id: milestone.id,
       index: milestone.index,

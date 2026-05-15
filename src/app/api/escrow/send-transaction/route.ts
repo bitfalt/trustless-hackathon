@@ -46,7 +46,13 @@ export async function POST(request: Request) {
           { status: 502 },
         );
       }
-      experiment = attachEscrowCreation(pending.experimentSlug, contractId, transactionHash, escrowModeForSubmittedTransaction(tx.status));
+      experiment = attachEscrowCreation(
+        pending.experimentSlug,
+        contractId,
+        transactionHash,
+        escrowModeForSubmittedTransaction(tx.status),
+        pending.roles,
+      );
     }
 
     if (pending.operation === "fund_escrow") {

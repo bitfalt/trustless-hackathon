@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { errorResponse, ok, readJson } from "@/lib/api";
-import { validateMilestoneOperation } from "@/lib/experiments";
+import { assertExperimentRole, validateMilestoneOperation } from "@/lib/experiments";
 import { createPendingTransaction } from "@/lib/pending-transactions";
 import { createTrustlessWorkClientFromEnv } from "@/lib/trustless-work/client";
 
@@ -11,6 +11,7 @@ const schema = z.object({
   experimentSlug: z.string().min(1),
   contractId: z.string().min(1),
   releaseSigner: z.string().min(1),
+  walletAddress: z.string().min(1),
   milestoneIndex: z.union([z.number().int().min(0), z.string().min(1)]),
 });
 
@@ -18,12 +19,16 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const params = await context.params;
     const input = await readJson(request, schema);
-    const { milestoneIndex } = validateMilestoneOperation({
+    const { experiment, milestoneIndex } = validateMilestoneOperation({
       experimentSlug: input.experimentSlug,
       milestoneId: params.id,
       milestoneIndex: input.milestoneIndex,
       contractId: input.contractId,
     });
+    assertExperimentRole(experiment, input.walletAddress, "releaseSigner");
+    if (input.walletAddress.toUpperCase() !== input.releaseSigner.toUpperCase()) {
+      return ok({ error: "Release signer must match the connected wallet" }, { status: 403 });
+    }
 
     const result = await createTrustlessWorkClientFromEnv().releaseMilestone({
       contractId: input.contractId,

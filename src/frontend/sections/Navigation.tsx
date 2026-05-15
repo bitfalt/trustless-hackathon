@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router'
 import { ArrowRight } from 'lucide-react'
+import { shortWallet, useWallet } from '../wallet'
 
 const NAV_ITEMS = [
   { label: 'How It Works', href: '#how-it-works' },
@@ -9,6 +11,9 @@ const NAV_ITEMS = [
 
 export default function Navigation() {
   const [scrolled, setScrolled] = useState(false)
+  const [manualWallet, setManualWallet] = useState('')
+  const { address, connectWallet, useManualWallet } = useWallet()
+  const location = useLocation()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 100)
@@ -17,6 +22,7 @@ export default function Navigation() {
   }, [])
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (location.pathname !== '/') return
     e.preventDefault()
     document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -42,9 +48,8 @@ export default function Navigation() {
       }}
     >
       {/* Brand */}
-      <a
-        href="#"
-        onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+      <Link
+        to="/"
         className="font-geist-mono"
         style={{
           fontSize: '0.95rem',
@@ -55,7 +60,7 @@ export default function Navigation() {
         }}
       >
         EcoProof
-      </a>
+      </Link>
 
       {/* Center links */}
       <div
@@ -89,9 +94,38 @@ export default function Navigation() {
       </div>
 
       {/* Right CTA — pill button matching reference style */}
-      <a
-        href="#how-it-works"
-        onClick={(e) => handleClick(e, '#how-it-works')}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <input
+        value={manualWallet}
+        onChange={(event) => setManualWallet(event.target.value)}
+        onBlur={() => manualWallet && useManualWallet(manualWallet)}
+        placeholder="Wallet"
+        aria-label="Wallet address"
+        style={{
+          width: 'min(28vw, 210px)',
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          color: '#fff',
+          padding: '9px 10px',
+          fontSize: '0.72rem',
+        }}
+      />
+      <button
+        type="button"
+        onClick={connectWallet}
+        style={{
+          color: '#ffffff',
+          background: 'rgba(255,255,255,0.08)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          padding: '9px 12px',
+          fontSize: '0.72rem',
+          cursor: 'pointer',
+        }}
+      >
+        {address ? shortWallet(address) : 'Connect'}
+      </button>
+      <Link
+        to="/experiments/new"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -104,7 +138,6 @@ export default function Navigation() {
           color: '#ffffff',
           background: 'rgba(255,255,255,0.08)',
           border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '100px',
           textDecoration: 'none',
           transition: 'all 0.2s ease',
         }}
@@ -117,9 +150,10 @@ export default function Navigation() {
           e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
         }}
       >
-        Launch
+        Start
         <ArrowRight size={13} strokeWidth={2} />
-      </a>
+      </Link>
+      </div>
 
       <style>{`
         @media (max-width: 640px) {

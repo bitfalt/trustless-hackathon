@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import { galleryConfig, workDetailConfig, type WorkItem } from '../config'
 import { useOpenLabProjects } from '../openlab-projects'
+import { shortWallet, useWallet } from '../wallet'
 
 type ApiResult = {
   error?: string
@@ -13,19 +14,11 @@ type ApiResult = {
   message?: string
 }
 
-const demoAddresses = {
-  signer: 'GDEMOFUNDER111111111111111111111111111111111111111111111111',
-  serviceProvider: 'GDEMOPROVIDER111111111111111111111111111111111111111111',
-  approver: 'GDEMOVERIFIER1111111111111111111111111111111111111111111',
-  releaseSigner: 'GDEMORELEASE11111111111111111111111111111111111111111111',
-  disputeResolver: 'GDEMODISPUTE1111111111111111111111111111111111111111111',
-  trustline: 'GDEMOUSDC1111111111111111111111111111111111111111111111',
-}
-
 export default function WorkDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { projects, reloadProjects } = useOpenLabProjects()
+  const { address, signTransaction } = useWallet()
   const [isBusy, setIsBusy] = useState(false)
   const [lastResult, setLastResult] = useState<string>()
 
@@ -60,9 +53,10 @@ export default function WorkDetail() {
   }
 
   async function submitSignedTransaction(unsignedTransaction: string, pendingTransactionId: string) {
+    const signedXdr = await signTransaction(unsignedTransaction)
     return callApi('/api/escrow/send-transaction', {
       pendingTransactionId,
-      signedXdr: `${unsignedTransaction}.signed-for-openlab-demo`,
+      signedXdr,
     })
   }
 
@@ -85,16 +79,18 @@ export default function WorkDetail() {
   }
 
   async function createEscrow(work: WorkItem) {
+    if (!address) throw new Error('Connect the project creator wallet first')
     const pending = await callApi('/api/escrow/create', {
       experimentSlug: work.slug ?? work.id,
-      signer: demoAddresses.signer,
-      serviceProvider: demoAddresses.serviceProvider,
-      approver: demoAddresses.approver,
-      platformAddress: demoAddresses.signer,
-      releaseSigner: demoAddresses.releaseSigner,
-      disputeResolver: demoAddresses.disputeResolver,
+      signer: address,
+      walletAddress: address,
+      serviceProvider: work.roles?.serviceProvider ?? address,
+      approver: work.roles?.approver ?? address,
+      platformAddress: work.roles?.platform ?? address,
+      releaseSigner: work.roles?.releaseSigner ?? address,
+      disputeResolver: work.roles?.disputeResolver ?? address,
       trustline: {
-        address: demoAddresses.trustline,
+        address: process.env.NEXT_PUBLIC_OPENLAB_USDC_TRUSTLINE_ADDRESS ?? 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
         symbol: 'USDC',
       },
     })
@@ -102,19 +98,23 @@ export default function WorkDetail() {
   }
 
   async function fundEscrow(work: WorkItem) {
+    if (!address) throw new Error('Connect the funding wallet first')
     const remaining = Math.max((work.fundingGoal ?? 0) - (work.fundedAmount ?? 0), 0)
     const pending = await callApi('/api/escrow/fund', {
       experimentSlug: work.slug ?? work.id,
       contractId: work.escrowContractId,
-      signer: demoAddresses.signer,
+      signer: address,
+      walletAddress: address,
       amount: remaining || 1,
     })
     return submitSignedTransaction(pending.unsignedTransaction!, pending.pendingTransactionId!)
   }
 
   async function submitEvidence(work: WorkItem, milestoneId: string) {
+    if (!address) throw new Error('Connect the service provider wallet first')
     return callApi(`/api/milestones/${milestoneId}/submit-evidence`, {
       experimentSlug: work.slug ?? work.id,
+      walletAddress: address,
       notes: 'Demo evidence generated from the EcoProof operator panel.',
       evidence: [
         {
@@ -138,20 +138,23 @@ export default function WorkDetail() {
         ? {
             experimentSlug: work.slug ?? work.id,
             contractId: work.escrowContractId,
-            approver: demoAddresses.approver,
+            approver: address,
+            walletAddress: address,
             milestoneIndex: milestone.index,
           }
         : operation === 'release'
           ? {
               experimentSlug: work.slug ?? work.id,
               contractId: work.escrowContractId,
-              releaseSigner: demoAddresses.releaseSigner,
+              releaseSigner: address,
+              walletAddress: address,
               milestoneIndex: milestone.index,
             }
           : {
               experimentSlug: work.slug ?? work.id,
               contractId: work.escrowContractId,
-              signer: demoAddresses.serviceProvider,
+              signer: address,
+              walletAddress: address,
               milestoneIndex: milestone.index,
             }
     const pending = await callApi(endpoint, body)
@@ -189,6 +192,20 @@ export default function WorkDetail() {
       </div>
     )
   }
+
+  const connected = address?.toUpperCase()
+  const isCreator = Boolean(connected && work.creatorWallet?.toUpperCase() === connected)
+  const isServiceProvider = Boolean(connected && work.roles?.serviceProvider?.toUpperCase() === connected)
+  const isApprover = Boolean(connected && work.roles?.approver?.toUpperCase() === connected)
+  const isReleaseSigner = Boolean(connected && work.roles?.releaseSigner?.toUpperCase() === connected)
+  const canCreateEscrow = !work.escrowContractId && (isCreator || (!work.creatorWallet && Boolean(address)))
+  const canFundEscrow = Boolean(address && work.escrowContractId && (work.fundedAmount ?? 0) < (work.fundingGoal ?? 0))
+  const roleSummary = [
+    isCreator ? 'creator' : undefined,
+    isServiceProvider ? 'service provider' : undefined,
+    isApprover ? 'approver' : undefined,
+    isReleaseSigner ? 'release signer' : undefined,
+  ].filter(Boolean).join(', ') || 'read-only'
 
   return (
     <div
@@ -369,15 +386,18 @@ export default function WorkDetail() {
               <div style={{ color: '#c8f7dc' }}>
                 {work.escrowContractId ? 'Escrow created' : 'Ready to create'} · {work.escrowMode ?? 'demo'}
               </div>
+              <div style={{ opacity: 0.5, marginTop: '8px' }}>Connected as {shortWallet(address)} · {roleSummary}</div>
             </div>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => runAction('Demo reset', resetDemo)}
-              style={operatorButtonStyle(isBusy)}
-            >
-              Reset demo
-            </button>
+            {process.env.NODE_ENV !== 'production' && (
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => runAction('Demo reset', resetDemo)}
+                style={operatorButtonStyle(isBusy)}
+              >
+                Reset demo
+              </button>
+            )}
           </div>
 
           <div
@@ -398,23 +418,23 @@ export default function WorkDetail() {
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
             <button
               type="button"
-              disabled={isBusy || Boolean(work.escrowContractId)}
+              disabled={isBusy || !canCreateEscrow}
               onClick={() => runAction('Create escrow', () => createEscrow(work))}
-              style={operatorButtonStyle(isBusy || Boolean(work.escrowContractId))}
+              style={operatorButtonStyle(isBusy || !canCreateEscrow)}
             >
               Create escrow
             </button>
             <button
               type="button"
-              disabled={isBusy || !work.escrowContractId || (work.fundedAmount ?? 0) >= (work.fundingGoal ?? 0)}
+              disabled={isBusy || !canFundEscrow}
               onClick={() => runAction('Fund escrow', () => fundEscrow(work))}
-              style={operatorButtonStyle(isBusy || !work.escrowContractId || (work.fundedAmount ?? 0) >= (work.fundingGoal ?? 0))}
+              style={operatorButtonStyle(isBusy || !canFundEscrow)}
             >
               Fund remaining
             </button>
-            {work.escrowViewerUrl && (
-              <a href={work.escrowViewerUrl} target="_blank" rel="noreferrer" style={linkButtonStyle}>
-                View escrow
+            {work.escrowContractId && (
+              <a href="https://viewer.trustlesswork.com/" target="_blank" rel="noreferrer" style={linkButtonStyle}>
+                Open Viewer
               </a>
             )}
           </div>
@@ -463,33 +483,33 @@ export default function WorkDetail() {
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       type="button"
-                      disabled={isBusy}
+                      disabled={isBusy || !isServiceProvider}
                       onClick={() => runAction('Submit evidence', () => submitEvidence(work, milestone.id))}
-                      style={operatorButtonStyle(isBusy)}
+                      style={operatorButtonStyle(isBusy || !isServiceProvider)}
                     >
                       Submit evidence
                     </button>
                     <button
                       type="button"
-                      disabled={isBusy || !work.escrowContractId}
+                      disabled={isBusy || !work.escrowContractId || !isServiceProvider}
                       onClick={() => runAction('Complete milestone', () => milestoneTransaction(work, milestone, 'complete'))}
-                      style={operatorButtonStyle(isBusy || !work.escrowContractId)}
+                      style={operatorButtonStyle(isBusy || !work.escrowContractId || !isServiceProvider)}
                     >
                       Complete
                     </button>
                     <button
                       type="button"
-                      disabled={isBusy || !work.escrowContractId}
+                      disabled={isBusy || !work.escrowContractId || !isApprover}
                       onClick={() => runAction('Approve milestone', () => milestoneTransaction(work, milestone, 'approve'))}
-                      style={operatorButtonStyle(isBusy || !work.escrowContractId)}
+                      style={operatorButtonStyle(isBusy || !work.escrowContractId || !isApprover)}
                     >
                       Approve
                     </button>
                     <button
                       type="button"
-                      disabled={isBusy || !work.escrowContractId}
+                      disabled={isBusy || !work.escrowContractId || !isReleaseSigner}
                       onClick={() => runAction('Release funds', () => milestoneTransaction(work, milestone, 'release'))}
-                      style={operatorButtonStyle(isBusy || !work.escrowContractId)}
+                      style={operatorButtonStyle(isBusy || !work.escrowContractId || !isReleaseSigner)}
                     >
                       Release
                     </button>

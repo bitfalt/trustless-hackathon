@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   addEvidenceToMilestone,
+  assertExperimentRole,
   approveMilestoneLocally,
   attachEscrowCreation,
   attachEscrowFunding,
+  createExperiment,
   findExperimentBySlug,
   getExperiments,
   releaseMilestoneLocally,
@@ -113,5 +115,54 @@ describe("OpenLab experiment domain", () => {
     attachEscrowFunding(waterWatchSlug, 1000, "tx-fund-1");
 
     expect(() => attachEscrowFunding(waterWatchSlug, 1, "tx-fund-2")).toThrow(/exceeds remaining funding/);
+  });
+
+  it("creates wallet-owned experiments with role metadata", () => {
+    const experiment = createExperiment({
+      title: "Neighborhood Soil Study",
+      location: "Cartago, Costa Rica",
+      category: "Health",
+      summary: "A community study measures soil health indicators with public evidence.",
+      problem: "Families need transparent soil quality information before planting community gardens.",
+      methodology: "The team collects samples, uploads lab evidence, and publishes an open report.",
+      fundingGoal: 300,
+      creatorWallet: "G_CREATOR",
+      approverWallet: "G_APPROVER",
+      releaseSignerWallet: "G_RELEASE",
+      disputeResolverWallet: "G_DISPUTE",
+      milestones: [
+        {
+          title: "Sampling",
+          description: "Collect samples from approved sites.",
+          amount: 300,
+          deliverables: ["site list", "samples"],
+        },
+      ],
+    });
+
+    expect(experiment.slug).toBe("neighborhood-soil-study");
+    expect(experiment.creatorWallet).toBe("G_CREATOR");
+    expect(experiment.escrow.approverWallet).toBe("G_APPROVER");
+    expect(() => assertExperimentRole(experiment, "G_APPROVER", "approver")).not.toThrow();
+    expect(() => assertExperimentRole(experiment, "G_OTHER", "approver")).toThrow(/not the approver/);
+  });
+
+  it("rejects submitted experiments whose milestones do not match the funding goal", () => {
+    expect(() =>
+      createExperiment({
+        title: "Bad Budget Study",
+        location: "Cartago",
+        category: "Water",
+        summary: "A project with a bad milestone total should fail validation.",
+        problem: "The project should not be accepted with inconsistent escrow math.",
+        methodology: "The team would collect data and publish results.",
+        fundingGoal: 300,
+        creatorWallet: "G_CREATOR",
+        approverWallet: "G_APPROVER",
+        releaseSignerWallet: "G_RELEASE",
+        disputeResolverWallet: "G_DISPUTE",
+        milestones: [{ title: "Only milestone", description: "Does not add up.", amount: 200, deliverables: ["x"] }],
+      }),
+    ).toThrow(/funding goal/);
   });
 });
