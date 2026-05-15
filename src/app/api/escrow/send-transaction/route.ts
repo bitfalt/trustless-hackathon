@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     let experiment = undefined;
 
     if (pending.operation === "create_escrow") {
-      const contractId = tx.contractId ?? demoContractIdForCreate(pending.id, tx.status);
+      const contractId = tx.contractId;
       if (!contractId) {
         return ok(
           {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         pending.experimentSlug,
         contractId,
         transactionHash,
-        escrowModeForSubmittedTransaction(tx.status),
+        "real",
         pending.roles,
       );
     }
@@ -87,21 +87,4 @@ export async function POST(request: Request) {
   } catch (error) {
     return errorResponse(error);
   }
-}
-
-function escrowModeForSubmittedTransaction(status?: string): "real" | "demo" {
-  if (status === "demo_submitted") return "demo";
-  if (process.env.TRUSTLESS_WORK_API_KEY && process.env.OPENLAB_ESCROW_MODE !== "demo") return "real";
-  return "demo";
-}
-
-function demoContractIdForCreate(pendingTransactionId: string, status?: string): string | undefined {
-  const isDemoSubmission =
-    process.env.OPENLAB_ESCROW_MODE === "demo" ||
-    (process.env.NODE_ENV !== "production" &&
-      !process.env.TRUSTLESS_WORK_API_KEY &&
-      process.env.OPENLAB_DISABLE_DEMO_FALLBACK !== "true") ||
-    status === "demo_submitted";
-  if (!isDemoSubmission) return undefined;
-  return `demo_contract_${pendingTransactionId.replace(/^ptx_/, "")}`;
 }

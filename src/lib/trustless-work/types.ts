@@ -102,5 +102,4 @@ export type TrustlessWorkClientOptions = {
   apiBaseUrl: string;
   apiKey?: string;
   fetcher?: typeof fetch;
-  demoMode?: boolean;
 };

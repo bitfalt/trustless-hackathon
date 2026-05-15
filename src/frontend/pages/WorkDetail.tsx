@@ -90,7 +90,7 @@ export default function WorkDetail() {
       releaseSigner: work.roles?.releaseSigner ?? address,
       disputeResolver: work.roles?.disputeResolver ?? address,
       trustline: {
-        address: process.env.NEXT_PUBLIC_OPENLAB_USDC_TRUSTLINE_ADDRESS ?? 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
+        address: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
         symbol: 'USDC',
       },
     })
@@ -118,10 +118,10 @@ export default function WorkDetail() {
       notes: 'Demo evidence generated from the EcoProof operator panel.',
       evidence: [
         {
-          id: `demo-evidence-${Date.now()}`,
+          id: `evidence-${Date.now()}`,
           type: 'dataset',
-          title: 'Demo field dataset',
-          url: 'https://example.com/openlab/demo-dataset.csv',
+          title: 'Field dataset',
+          url: 'https://example.com/openlab/field-dataset.csv',
         },
       ],
     })
@@ -159,10 +159,6 @@ export default function WorkDetail() {
             }
     const pending = await callApi(endpoint, body)
     return submitSignedTransaction(pending.unsignedTransaction!, pending.pendingTransactionId!)
-  }
-
-  async function resetDemo() {
-    return callApi('/api/demo/reset', {})
   }
 
   if (!work) {
@@ -384,20 +380,10 @@ export default function WorkDetail() {
             <div>
               <div style={{ opacity: 0.48, marginBottom: '8px' }}>Trustless Work Escrow</div>
               <div style={{ color: '#c8f7dc' }}>
-                {work.escrowContractId ? 'Escrow created' : 'Ready to create'} · {work.escrowMode ?? 'demo'}
+                {work.escrowContractId ? 'Escrow created' : 'Ready to create'} · real testnet
               </div>
               <div style={{ opacity: 0.5, marginTop: '8px' }}>Connected as {shortWallet(address)} · {roleSummary}</div>
             </div>
-            {process.env.NODE_ENV !== 'production' && (
-              <button
-                type="button"
-                disabled={isBusy}
-                onClick={() => runAction('Demo reset', resetDemo)}
-                style={operatorButtonStyle(isBusy)}
-              >
-                Reset demo
-              </button>
-            )}
           </div>
 
           <div

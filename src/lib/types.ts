@@ -51,7 +51,7 @@ export type EscrowMetadata = {
   lastOperation?: string;
   lastTransactionHash?: string;
   network: "testnet" | "mainnet";
-  mode: "real" | "demo";
+  mode: "real";
 };
 
 export type Experiment = {

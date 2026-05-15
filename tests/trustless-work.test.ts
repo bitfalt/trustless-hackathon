@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { findExperimentBySlug } from "@/lib/experiments";
+import { findExperimentBySlug, resetExperimentsForTests } from "@/lib/experiments";
 import { TrustlessWorkClient, createTrustlessWorkClientFromEnv } from "@/lib/trustless-work/client";
 import { buildInitializeMultiReleaseEscrowPayload, buildViewerUrl } from "@/lib/trustless-work/openlab-mapper";
 
@@ -18,6 +18,10 @@ const addresses = {
 };
 
 describe("Trustless Work mapping", () => {
+  beforeEach(() => {
+    resetExperimentsForTests();
+  });
+
   it("maps WaterWatch into a valid multi-release escrow deploy payload", () => {
     const experiment = findExperimentBySlug("waterwatch-costa-rica");
     expect(experiment).toBeDefined();
@@ -54,10 +58,8 @@ describe("TrustlessWorkClient", () => {
   it("defaults real Trustless Work calls to the testnet API base", async () => {
     const originalBaseUrl = process.env.TRUSTLESS_WORK_API_BASE_URL;
     const originalApiKey = process.env.TRUSTLESS_WORK_API_KEY;
-    const originalEscrowMode = process.env.OPENLAB_ESCROW_MODE;
     process.env.TRUSTLESS_WORK_API_BASE_URL = "";
     process.env.TRUSTLESS_WORK_API_KEY = "secret-key";
-    delete process.env.OPENLAB_ESCROW_MODE;
 
     const fetcher = vi.fn(async () => new Response(JSON.stringify([{ contractId: "CONTRACT123" }]), { status: 200 }));
     const client = createTrustlessWorkClientFromEnv(fetcher);
@@ -73,20 +75,6 @@ describe("TrustlessWorkClient", () => {
     else process.env.TRUSTLESS_WORK_API_BASE_URL = originalBaseUrl;
     if (originalApiKey === undefined) delete process.env.TRUSTLESS_WORK_API_KEY;
     else process.env.TRUSTLESS_WORK_API_KEY = originalApiKey;
-    if (originalEscrowMode === undefined) delete process.env.OPENLAB_ESCROW_MODE;
-    else process.env.OPENLAB_ESCROW_MODE = originalEscrowMode;
-  });
-
-  it("can create deterministic demo unsigned transactions without an API key", async () => {
-    const client = new TrustlessWorkClient({
-      apiBaseUrl: "https://api.trustlesswork.com",
-      demoMode: true,
-    });
-
-    const result = await client.fundEscrow({ contractId: "CONTRACT123", signer: "G_SIGNER", amount: 1000 });
-
-    expect(result.unsignedTransaction).toContain("OPENLAB_DEMO_UNSIGNED_XDR");
-    expect(result.raw).toEqual(expect.objectContaining({ mode: "demo" }));
   });
 
   it("uses x-api-key server-side and normalizes unsigned transactions", async () => {

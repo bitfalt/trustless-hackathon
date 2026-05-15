@@ -17,7 +17,7 @@ export type ProjectCardView = {
   fundedAmount: number;
   escrowContractId?: string;
   escrowViewerUrl?: string;
-  escrowMode: "real" | "demo";
+  escrowMode: "real";
   escrowBalance?: number;
   creatorWallet?: string;
   roles: {

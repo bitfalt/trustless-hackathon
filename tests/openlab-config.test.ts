@@ -1,20 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { resolveCreateEscrowConfig } from "@/lib/openlab-config";
 
-const previousEnv = { ...process.env };
-
 describe("OpenLab config helpers", () => {
-  afterEach(() => {
-    process.env = { ...previousEnv };
-  });
-
-  it("defaults platform, release signer, dispute resolver, and USDC trustline from env", () => {
-    process.env.OPENLAB_PLATFORM_ADDRESS = "G_PLATFORM_ENV";
-    process.env.OPENLAB_RELEASE_SIGNER_ADDRESS = "G_RELEASE_ENV";
-    process.env.OPENLAB_DISPUTE_RESOLVER_ADDRESS = "G_RESOLVER_ENV";
-    process.env.OPENLAB_USDC_TRUSTLINE_ADDRESS = "C_USDC_ENV";
-
+  it("defaults role fallbacks from the connected wallets and the real testnet USDC trustline", () => {
     const config = resolveCreateEscrowConfig({
       experimentSlug: "waterwatch-costa-rica",
       signer: "G_SIGNER",
@@ -22,25 +11,30 @@ describe("OpenLab config helpers", () => {
       approver: "G_APPROVER",
     });
 
-    expect(config.platformAddress).toBe("G_PLATFORM_ENV");
-    expect(config.releaseSigner).toBe("G_RELEASE_ENV");
-    expect(config.disputeResolver).toBe("G_RESOLVER_ENV");
-    expect(config.trustline).toEqual({ address: "C_USDC_ENV", symbol: "USDC" });
+    expect(config.platformAddress).toBe("G_SIGNER");
+    expect(config.releaseSigner).toBe("G_APPROVER");
+    expect(config.disputeResolver).toBe("G_APPROVER");
+    expect(config.trustline).toEqual({
+      address: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      symbol: "USDC",
+    });
   });
 
-  it("throws a helpful error when server defaults are missing", () => {
-    delete process.env.OPENLAB_PLATFORM_ADDRESS;
-    delete process.env.OPENLAB_RELEASE_SIGNER_ADDRESS;
-    delete process.env.OPENLAB_DISPUTE_RESOLVER_ADDRESS;
-    delete process.env.OPENLAB_USDC_TRUSTLINE_ADDRESS;
+  it("keeps explicit role and trustline overrides from the request", () => {
+    const config = resolveCreateEscrowConfig({
+      experimentSlug: "waterwatch-costa-rica",
+      signer: "G_SIGNER",
+      serviceProvider: "G_TEAM",
+      approver: "G_APPROVER",
+      platformAddress: "G_PLATFORM",
+      releaseSigner: "G_RELEASE",
+      disputeResolver: "G_RESOLVER",
+      trustline: { address: "C_USDC", symbol: "USDC" },
+    });
 
-    expect(() =>
-      resolveCreateEscrowConfig({
-        experimentSlug: "waterwatch-costa-rica",
-        signer: "G_SIGNER",
-        serviceProvider: "G_TEAM",
-        approver: "G_APPROVER",
-      }),
-    ).toThrow(/OPENLAB_PLATFORM_ADDRESS/);
+    expect(config.platformAddress).toBe("G_PLATFORM");
+    expect(config.releaseSigner).toBe("G_RELEASE");
+    expect(config.disputeResolver).toBe("G_RESOLVER");
+    expect(config.trustline).toEqual({ address: "C_USDC", symbol: "USDC" });
   });
 });

@@ -60,10 +60,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    if (process.env.NODE_ENV !== "production" && unsignedXdr.startsWith("OPENLAB_DEMO_UNSIGNED_XDR")) {
-      return `${unsignedXdr}.signed-for-openlab-demo`;
-    }
-
     throw new Error("A wallet signer is required for real testnet transactions");
   }
 

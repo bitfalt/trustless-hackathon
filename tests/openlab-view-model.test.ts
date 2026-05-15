@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { findExperimentBySlug } from "@/lib/experiments";
+import { findExperimentBySlug, resetExperimentsForTests } from "@/lib/experiments";
 import { experimentToProjectCard } from "@/lib/openlab-view-model";
 
 describe("OpenLab project view model", () => {
+  beforeEach(() => {
+    resetExperimentsForTests();
+  });
+
   it("maps backend experiment state into the frontend project card contract", () => {
     const experiment = findExperimentBySlug("waterwatch-costa-rica");
     expect(experiment).toBeDefined();

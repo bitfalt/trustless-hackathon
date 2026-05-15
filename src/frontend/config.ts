@@ -30,7 +30,7 @@ export interface WorkItem {
   fundedAmount?: number
   escrowContractId?: string
   escrowViewerUrl?: string
-  escrowMode?: "real" | "demo"
+  escrowMode?: "real"
   escrowBalance?: number
   creatorWallet?: string
   roles?: {

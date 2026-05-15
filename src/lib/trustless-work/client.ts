@@ -31,13 +31,11 @@ export class TrustlessWorkClient {
   private readonly apiBaseUrl: string;
   private readonly apiKey?: string;
   private readonly fetcher: typeof fetch;
-  private readonly demoMode: boolean;
 
   constructor(options: TrustlessWorkClientOptions) {
     this.apiBaseUrl = options.apiBaseUrl.replace(/\/$/, "");
     this.apiKey = options.apiKey;
     this.fetcher = options.fetcher ?? fetch;
-    this.demoMode = options.demoMode ?? false;
   }
 
   initializeMultiReleaseEscrow(
@@ -87,15 +85,6 @@ export class TrustlessWorkClient {
   }
 
   async sendTransaction(payload: SendTransactionPayload): Promise<SendTransactionResponse> {
-    if (this.demoMode) {
-      return {
-        transactionHash: `demo_tx_${Date.now()}`,
-        contractId: payload.signedXdr.includes("create") ? `demo_contract_${Date.now()}` : undefined,
-        status: "demo_submitted",
-        raw: { mode: "demo", payload },
-      };
-    }
-
     const raw = await this.post<JsonObject>("/helper/send-transaction", payload);
     return {
       transactionHash: extractFirstString(raw, ["transactionHash", "hash", "txHash", "tx_hash"]),
@@ -106,19 +95,6 @@ export class TrustlessWorkClient {
   }
 
   private async postUnsigned(endpoint: string, payload: unknown): Promise<UnsignedTransactionResponse> {
-    if (this.demoMode) {
-      const encodedPayload = Buffer.from(JSON.stringify({ endpoint, payload })).toString("base64url");
-      return {
-        unsignedTransaction: `OPENLAB_DEMO_UNSIGNED_XDR.${encodedPayload}`,
-        raw: {
-          mode: "demo",
-          endpoint,
-          payload,
-          message: "Demo unsigned XDR. Configure TRUSTLESS_WORK_API_KEY and unset OPENLAB_ESCROW_MODE=demo for real Trustless Work calls.",
-        },
-      };
-    }
-
     const raw = await this.post<JsonObject>(endpoint, payload);
     const unsignedTransaction = extractFirstString(raw, ["unsignedTransaction", "xdr", "unsignedXdr"]);
 
@@ -137,16 +113,13 @@ export class TrustlessWorkClient {
   }
 
   private async get<T>(endpoint: string): Promise<T> {
-    if (this.demoMode) {
-      return { mode: "demo", endpoint, escrows: [] } as T;
-    }
     return this.request<T>(endpoint, { method: "GET" });
   }
 
   private async request<T>(endpoint: string, init: RequestInit): Promise<T> {
     if (!this.apiKey) {
       throw new TrustlessWorkApiError(
-        "TRUSTLESS_WORK_API_KEY is required for real Trustless Work calls. Use OPENLAB_ESCROW_MODE=demo for local UI testing.",
+        "TRUSTLESS_WORK_API_KEY is required for Trustless Work calls.",
         500,
       );
     }
@@ -171,16 +144,10 @@ export class TrustlessWorkClient {
 }
 
 export function createTrustlessWorkClientFromEnv(fetcher?: typeof fetch): TrustlessWorkClient {
-  const hasApiKey = Boolean(process.env.TRUSTLESS_WORK_API_KEY);
-  const explicitDemoMode = process.env.OPENLAB_ESCROW_MODE === "demo";
-  const developmentDemoFallback =
-    process.env.NODE_ENV !== "production" && !hasApiKey && process.env.OPENLAB_DISABLE_DEMO_FALLBACK !== "true";
-
   return new TrustlessWorkClient({
     apiBaseUrl: process.env.TRUSTLESS_WORK_API_BASE_URL || "https://dev.api.trustlesswork.com",
     apiKey: process.env.TRUSTLESS_WORK_API_KEY,
     fetcher,
-    demoMode: explicitDemoMode || developmentDemoFallback,
   });
 }
 

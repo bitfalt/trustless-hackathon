@@ -27,7 +27,7 @@ const seededExperiments: Experiment[] = [
       type: "multi-release",
       engagementId: "openlab-waterwatch-costa-rica",
       network: testnet,
-      mode: "demo",
+      mode: "real",
       balance: 0,
     },
     team: {
@@ -105,7 +105,7 @@ const seededExperiments: Experiment[] = [
       type: "multi-release",
       engagementId: "openlab-air-quality-around-schools",
       network: testnet,
-      mode: "demo",
+      mode: "real",
       balance: 0,
     },
     team: { name: "School Air Lab", type: "student" },
@@ -130,7 +130,7 @@ const seededExperiments: Experiment[] = [
       type: "multi-release",
       engagementId: "openlab-open-gps-bus-study",
       network: testnet,
-      mode: "demo",
+      mode: "real",
       balance: 0,
     },
     team: { name: "Open Mobility CR", type: "civic-team" },
@@ -208,7 +208,7 @@ export function createExperiment(input: CreateExperimentInput): Experiment {
       type: "multi-release",
       engagementId: `openlab-${slug}`,
       network: testnet,
-      mode: process.env.TRUSTLESS_WORK_API_KEY && process.env.OPENLAB_ESCROW_MODE !== "demo" ? "real" : "demo",
+      mode: "real",
       balance: 0,
       serviceProviderWallet: input.creatorWallet,
       approverWallet: input.approverWallet,
@@ -489,5 +489,5 @@ function slugify(value: string): string {
 }
 
 function shouldUseSeededExperiments(): boolean {
-  return process.env.OPENLAB_ALLOW_SEEDED_EXPERIMENTS === "true" || !process.env.TRUSTLESS_WORK_API_KEY;
+  return process.env.OPENLAB_ENABLE_SEEDS === "true";
 }
