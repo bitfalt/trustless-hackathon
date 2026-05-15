@@ -26,7 +26,6 @@ export async function POST(request: Request) {
 
     const client = createTrustlessWorkClientFromEnv();
     const tx = await client.sendTransaction({ signedXdr: input.signedXdr });
-    consumePendingTransaction(input.pendingTransactionId);
     const transactionHash = tx.transactionHash;
     const canonicalUpdate = transactionHash
       ? await client.updateFromTransactionHash({ txHash: transactionHash }).catch((error) => ({
@@ -36,7 +35,7 @@ export async function POST(request: Request) {
     let experiment = undefined;
 
     if (pending.operation === "create_escrow") {
-      const contractId = tx.contractId ?? demoContractIdForCreate(pending.id);
+      const contractId = tx.contractId ?? demoContractIdForCreate(pending.id, tx.status);
       if (!contractId) {
         return ok(
           {
@@ -70,6 +69,8 @@ export async function POST(request: Request) {
       experiment = releaseMilestoneLocally(pending.experimentSlug, pending.milestoneId, transactionHash);
     }
 
+    consumePendingTransaction(input.pendingTransactionId);
+
     return ok({
       operation: pending.operation,
       pendingTransactionId: pending.id,
@@ -82,7 +83,13 @@ export async function POST(request: Request) {
   }
 }
 
-function demoContractIdForCreate(pendingTransactionId: string): string | undefined {
-  if (process.env.OPENLAB_ESCROW_MODE !== "demo") return undefined;
+function demoContractIdForCreate(pendingTransactionId: string, status?: string): string | undefined {
+  const isDemoSubmission =
+    process.env.OPENLAB_ESCROW_MODE === "demo" ||
+    (process.env.NODE_ENV !== "production" &&
+      !process.env.TRUSTLESS_WORK_API_KEY &&
+      process.env.OPENLAB_DISABLE_DEMO_FALLBACK !== "true") ||
+    status === "demo_submitted";
+  if (!isDemoSubmission) return undefined;
   return `demo_contract_${pendingTransactionId.replace(/^ptx_/, "")}`;
 }

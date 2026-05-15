@@ -12,10 +12,22 @@ export type ProjectCardView = {
   location: string;
   medium: string;
   article: string;
+  currency: "USDC";
   fundingGoal: number;
   fundedAmount: number;
   escrowContractId?: string;
   escrowViewerUrl?: string;
+  escrowMode: "real" | "demo";
+  escrowBalance?: number;
+  milestones: Array<{
+    id: string;
+    index: number;
+    title: string;
+    amount: number;
+    status: string;
+    evidenceCount: number;
+    lastTransactionHash?: string;
+  }>;
 };
 
 const imageByCategory: Record<string, string> = {
@@ -46,10 +58,22 @@ export function experimentToProjectCard(experiment: Experiment): ProjectCardView
     location: experiment.location,
     medium: experiment.methodology,
     article: `${experiment.summary}\n\n${experiment.problem}\n\n${experiment.methodology}\n\nMilestones:\n${milestoneSummary}`,
+    currency: experiment.currency,
     fundingGoal: experiment.fundingGoal,
     fundedAmount: experiment.fundedAmount,
     escrowContractId: experiment.escrow.contractId ?? experiment.escrowContractId,
     escrowViewerUrl: experiment.escrow.viewerUrl ?? experiment.escrowViewerUrl,
+    escrowMode: experiment.escrow.mode,
+    escrowBalance: experiment.escrow.balance,
+    milestones: experiment.milestones.map((milestone) => ({
+      id: milestone.id,
+      index: milestone.index,
+      title: milestone.title,
+      amount: milestone.amount,
+      status: milestone.status,
+      evidenceCount: milestone.evidence.length,
+      lastTransactionHash: milestone.lastTransactionHash,
+    })),
   };
 }
 

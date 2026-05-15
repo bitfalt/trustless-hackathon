@@ -6,4 +6,5 @@ node_modules
 .DS_Store
 coverage
 .openlab-data.json
+.openlab-pending-transactions.json
 tsconfig.tsbuildinfo

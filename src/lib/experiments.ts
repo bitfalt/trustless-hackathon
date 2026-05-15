@@ -27,7 +27,7 @@ const seededExperiments: Experiment[] = [
       type: "multi-release",
       engagementId: "openlab-waterwatch-costa-rica",
       network: testnet,
-      mode: "real",
+      mode: "demo",
       balance: 0,
     },
     team: {

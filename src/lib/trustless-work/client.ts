@@ -171,11 +171,16 @@ export class TrustlessWorkClient {
 }
 
 export function createTrustlessWorkClientFromEnv(fetcher?: typeof fetch): TrustlessWorkClient {
+  const hasApiKey = Boolean(process.env.TRUSTLESS_WORK_API_KEY);
+  const explicitDemoMode = process.env.OPENLAB_ESCROW_MODE === "demo";
+  const developmentDemoFallback =
+    process.env.NODE_ENV !== "production" && !hasApiKey && process.env.OPENLAB_DISABLE_DEMO_FALLBACK !== "true";
+
   return new TrustlessWorkClient({
     apiBaseUrl: process.env.TRUSTLESS_WORK_API_BASE_URL || "https://dev.api.trustlesswork.com",
     apiKey: process.env.TRUSTLESS_WORK_API_KEY,
     fetcher,
-    demoMode: process.env.OPENLAB_ESCROW_MODE === "demo",
+    demoMode: explicitDemoMode || developmentDemoFallback,
   });
 }
 

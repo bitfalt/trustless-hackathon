@@ -25,10 +25,22 @@ export interface WorkItem {
   location: string
   medium: string
   article: string
+  currency?: "USDC"
   fundingGoal?: number
   fundedAmount?: number
   escrowContractId?: string
   escrowViewerUrl?: string
+  escrowMode?: "real" | "demo"
+  escrowBalance?: number
+  milestones?: Array<{
+    id: string
+    index: number
+    title: string
+    amount: number
+    status: string
+    evidenceCount: number
+    lastTransactionHash?: string
+  }>
 }
 
 export interface GalleryConfig {
