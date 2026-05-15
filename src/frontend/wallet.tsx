@@ -6,7 +6,10 @@ type FreighterApi = {
   isConnected?: () => Promise<boolean> | boolean;
   requestAccess?: () => Promise<string>;
   getAddress?: () => Promise<{ address?: string } | string>;
-  signTransaction?: (xdr: string, options?: { networkPassphrase?: string; address?: string }) => Promise<string>;
+  signTransaction?: (
+    xdr: string,
+    options?: { networkPassphrase?: string; address?: string },
+  ) => Promise<string | { signedTxXdr?: string; signerAddress?: string; error?: string }>;
 };
 
 type WalletContextValue = {
@@ -54,10 +57,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!address) throw new Error("Connect a wallet before signing");
 
     if (window.freighterApi?.signTransaction) {
-      return window.freighterApi.signTransaction(unsignedXdr, {
+      const signed = await window.freighterApi.signTransaction(unsignedXdr, {
         networkPassphrase: "Test SDF Network ; September 2015",
         address,
       });
+      if (typeof signed === "string") return signed;
+      if (signed.error) throw new Error(signed.error);
+      if (!signed.signedTxXdr) throw new Error("Freighter did not return a signed transaction XDR");
+      return signed.signedTxXdr;
     }
 
     throw new Error("A wallet signer is required for real testnet transactions");
