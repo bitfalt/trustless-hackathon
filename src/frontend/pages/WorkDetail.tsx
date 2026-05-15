@@ -78,6 +78,11 @@ export default function WorkDetail() {
     }
   }
 
+  async function copyContractId(contractId: string) {
+    await navigator.clipboard.writeText(contractId)
+    setLastResult(`Copied contract ${contractId}`)
+  }
+
   async function createEscrow(work: WorkItem) {
     if (!address) throw new Error('Connect the project creator wallet first')
     const pending = await callApi('/api/escrow/create', {
@@ -419,9 +424,18 @@ export default function WorkDetail() {
               Fund remaining
             </button>
             {work.escrowContractId && (
-              <a href="https://viewer.trustlesswork.com/" target="_blank" rel="noreferrer" style={linkButtonStyle}>
-                Open Viewer
-              </a>
+              <>
+                <button
+                  type="button"
+                  onClick={() => copyContractId(work.escrowContractId!)}
+                  style={linkButtonStyle}
+                >
+                  Copy contract ID
+                </button>
+                <a href="https://viewer.trustlesswork.com/" target="_blank" rel="noreferrer" style={linkButtonStyle}>
+                  Open Viewer
+                </a>
+              </>
             )}
           </div>
 

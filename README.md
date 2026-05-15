@@ -14,7 +14,7 @@ This repository is a single integrated Next.js app:
 - server-side Trustless Work API client
 - role-gated escrow and milestone API routes
 - local JSON persistence for hackathon/demo state
-- Freighter-based Stellar testnet signing path
+- Stellar Wallets Kit connection modal with Freighter, Albedo, WalletConnect, xBull, Ledger, and LOBSTR
 
 There is no fake Trustless Work mode. If `TRUSTLESS_WORK_API_KEY` is missing or invalid, Trustless Work calls fail loudly.
 
@@ -23,7 +23,7 @@ There is no fake Trustless Work mode. If `TRUSTLESS_WORK_API_KEY` is missing or 
 1. A creator connects a Stellar testnet wallet.
 2. The creator submits an experiment with funding goal, methodology, verifier wallet, release signer wallet, dispute resolver wallet, and milestones.
 3. The creator creates a Trustless Work multi-release escrow.
-4. Freighter signs the unsigned XDR returned by Trustless Work.
+4. The selected Stellar wallet signs the unsigned XDR returned by Trustless Work.
 5. The backend submits the signed XDR through Trustless Work and stores the real contract ID.
 6. A funder wallet funds the escrow.
 7. The service provider submits evidence and marks a milestone complete.
@@ -59,7 +59,7 @@ If port `3000` is busy, Next will print the alternate local URL.
 
 ## Testnet Wallet Setup
 
-For a real end-to-end demo, prepare Stellar testnet wallets in Freighter:
+For a real end-to-end demo, prepare Stellar testnet wallets in Freighter or another Stellar Wallets Kit-compatible wallet:
 
 - creator / service provider
 - funder
@@ -78,12 +78,12 @@ GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5
 ## Demo Script
 
 1. Start the app with `.env.local` configured.
-2. Connect Freighter on Stellar testnet.
+2. Connect a Stellar testnet wallet from the wallet picker.
 3. Click `Start` in the nav or hero.
 4. Submit an experiment at `/experiments/new`.
 5. On the project detail page, create the escrow with the creator wallet.
-6. Approve the Freighter signing prompt.
-7. Copy the contract ID shown in the project detail page.
+6. Approve the wallet signing prompt.
+7. Copy the contract ID from the project detail page.
 8. Open [Trustless Work Viewer](https://viewer.trustlesswork.com/) and paste the contract ID.
 9. Connect the funder wallet and fund the escrow.
 10. Connect the service provider wallet, submit evidence, and complete milestone 1.
