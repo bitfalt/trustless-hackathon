@@ -52,6 +52,9 @@ export default function Navigation() {
         to="/"
         className="font-geist-mono"
         style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '10px',
           fontSize: '0.95rem',
           fontWeight: 500,
           color: '#ffffff',
@@ -59,6 +62,7 @@ export default function Navigation() {
           letterSpacing: '-0.01em',
         }}
       >
+        <img src="/images/ecoproof-logo.png" alt="" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
         EcoProof
       </Link>
 

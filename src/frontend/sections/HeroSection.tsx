@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { heroConfig } from '../config'
 import { Globe, ArrowRight } from 'lucide-react'
 import HeroGlobeASCII from './HeroGlobeASCII'
@@ -55,6 +56,20 @@ export default function HeroSection() {
 
         {/* ===== CONTENT (z-index 2, over the globe) ===== */}
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', maxWidth: '720px' }}>
+          <img
+            src="/images/ecoproof-logo.png"
+            alt="EcoProof"
+            style={{
+              width: 'clamp(76px, 12vw, 128px)',
+              height: 'clamp(76px, 12vw, 128px)',
+              objectFit: 'contain',
+              marginBottom: '18px',
+              opacity: loaded ? 1 : 0,
+              transform: loaded ? 'translateY(0)' : 'translateY(10px)',
+              transition: 'opacity 0.8s ease 0.25s, transform 0.8s ease 0.25s',
+              filter: 'drop-shadow(0 0 28px rgba(0,196,120,0.38))',
+            }}
+          />
 
           {/* Trust badge */}
           <div
@@ -127,8 +142,8 @@ export default function HeroSection() {
             }}
           >
             {/* Primary — Start an Experiment */}
-            <a
-              href="#how-it-works"
+            <Link
+              to="/experiments/new"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -161,7 +176,7 @@ export default function HeroSection() {
               <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#050505', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ArrowRight size={11} color="#ffffff" strokeWidth={2.5} />
               </span>
-            </a>
+            </Link>
             {/* Secondary — Fund a Project */}
             <a
               href="#projects"
