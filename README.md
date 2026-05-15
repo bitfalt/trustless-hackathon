@@ -22,7 +22,7 @@ There is no fake Trustless Work mode. If `TRUSTLESS_WORK_API_KEY` is missing or 
 
 1. A creator connects a Stellar testnet wallet.
 2. The creator submits an experiment with funding goal, methodology, verifier wallet, release signer wallet, dispute resolver wallet, and milestones.
-3. The creator creates a Trustless Work multi-release escrow.
+3. EcoProof immediately creates the Trustless Work multi-release escrow as part of project submission.
 4. The selected Stellar wallet signs the unsigned XDR returned by Trustless Work.
 5. The backend submits the signed XDR through Trustless Work and stores the real contract ID.
 6. A funder wallet funds the escrow.
@@ -40,7 +40,7 @@ TRUSTLESS_WORK_API_BASE_URL=https://dev.api.trustlesswork.com
 TRUSTLESS_WORK_API_KEY=your_trustless_work_testnet_api_key
 ```
 
-That is the complete required env surface. Role wallets are collected in the UI when creating a project or creating escrow.
+That is the complete required env surface. Role wallets are collected in the project submission UI.
 
 ## Local Setup
 
@@ -80,12 +80,12 @@ GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5
 1. Start the app with `.env.local` configured.
 2. Connect a Stellar testnet wallet from the wallet picker.
 3. Click `Start` in the nav or hero.
-4. Submit an experiment at `/experiments/new`.
-5. On the project detail page, create the escrow with the creator wallet.
-6. Approve the wallet signing prompt.
+4. Submit the Community Water Quality Study at `/experiments/new`.
+5. Approve the wallet signing prompt to create the Trustless Work escrow immediately.
+6. Land on the project detail page with the contract ID already attached.
 7. Copy the contract ID from the project detail page.
-8. Open [Trustless Work Viewer](https://viewer.trustlesswork.com/) and paste the contract ID.
-9. Connect the funder wallet and fund the escrow.
+8. Open the Trustless Work Viewer deep link, or use `https://viewer.trustlesswork.com/{contractId}`.
+9. Connect any Stellar testnet wallet and fund a specific amount into the escrow.
 10. Connect the service provider wallet, submit evidence, and complete milestone 1.
 11. Connect the approver wallet and approve milestone 1.
 12. Connect the release signer wallet and release milestone 1 funds.
@@ -95,7 +95,7 @@ GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5
 
 The UI and backend both enforce roles:
 
-- creator: can create escrow for their submitted experiment
+- creator: submits the experiment and signs immediate escrow creation
 - funder: any connected wallet can fund an existing escrow
 - service provider: can submit evidence and complete milestones
 - approver: can approve milestones
@@ -114,7 +114,7 @@ Known gaps:
 - Local experiment and pending transaction state are JSON-backed, not a production database.
 - Non-transaction evidence submission checks wallet address, but does not yet require a signed auth message. Production should add wallet message signing for non-XDR actions.
 - The project explorer reads local submitted projects; it does not yet auto-index all live Trustless Work escrows by organization wallet.
-- Trustless Work Viewer does not support direct `/escrow/:id` deep links reliably; use the Viewer root and paste the contract ID.
+- Trustless Work Viewer accepts contract IDs at `https://viewer.trustlesswork.com/{contractId}`.
 
 ## Architecture
 
@@ -176,7 +176,7 @@ Returns local experiments and frontend project cards.
 
 ### `POST /api/experiments`
 
-Creates a new local experiment draft. Milestone amounts must add up to `fundingGoal`.
+Creates a new local experiment. The frontend immediately follows this with Trustless Work escrow creation and wallet signing. Milestone amounts must add up to `fundingGoal`.
 
 ### `GET /api/experiments/:slug`
 
@@ -184,11 +184,11 @@ Returns one experiment and its frontend project card.
 
 ### `POST /api/escrow/create`
 
-Builds a Trustless Work multi-release escrow and returns unsigned XDR. The connected creator wallet must match the experiment creator when the experiment has a creator wallet.
+Builds a Trustless Work multi-release escrow and returns unsigned XDR. Escrow creation is permissionless; the signer only has to match the connected wallet.
 
 ### `POST /api/escrow/fund`
 
-Builds unsigned XDR for funding an existing escrow. The signer must match the connected wallet.
+Builds unsigned XDR for funding a specific amount into an existing escrow. The signer must match the connected wallet.
 
 ### `POST /api/escrow/send-transaction`
 

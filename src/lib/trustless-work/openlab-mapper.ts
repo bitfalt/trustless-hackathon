@@ -39,7 +39,7 @@ export function buildInitializeMultiReleaseEscrowPayload(
 export function buildViewerUrl(contractId: string, baseUrl?: string): string {
   const normalizedBase = (baseUrl ?? process.env.NEXT_PUBLIC_ESCROW_VIEWER_BASE_URL ?? "https://viewer.trustlesswork.com")
     .replace(/\/$/, "");
-  return `${normalizedBase}/escrow/${contractId}`;
+  return `${normalizedBase}/${contractId}`;
 }
 
 export function getMilestoneByIndex(experiment: Experiment, milestoneIndex: number) {

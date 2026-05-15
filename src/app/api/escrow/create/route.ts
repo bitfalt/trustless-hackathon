@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { errorResponse, ok, readJson } from "@/lib/api";
-import { assertExperimentRole, findExperimentBySlug } from "@/lib/experiments";
+import { findExperimentBySlug } from "@/lib/experiments";
 import { createTrustlessWorkClientFromEnv } from "@/lib/trustless-work/client";
 import { createPendingTransaction } from "@/lib/pending-transactions";
 import { resolveCreateEscrowConfig } from "@/lib/openlab-config";
@@ -30,7 +30,6 @@ export async function POST(request: Request) {
     const input = await readJson(request, schema);
     const experiment = findExperimentBySlug(input.experimentSlug);
     if (!experiment) return ok({ error: "Experiment not found" }, { status: 404 });
-    if (experiment.creatorWallet) assertExperimentRole(experiment, input.walletAddress ?? input.signer, "creator");
     if ((input.walletAddress ?? input.signer).toUpperCase() !== input.signer.toUpperCase()) {
       return ok({ error: "Signer must match the connected wallet" }, { status: 403 });
     }

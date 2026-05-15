@@ -21,6 +21,7 @@ export default function WorkDetail() {
   const { address, signTransaction } = useWallet()
   const [isBusy, setIsBusy] = useState(false)
   const [lastResult, setLastResult] = useState<string>()
+  const [fundAmount, setFundAmount] = useState("25")
 
   const worksById = useMemo(
     () =>
@@ -104,13 +105,14 @@ export default function WorkDetail() {
 
   async function fundEscrow(work: WorkItem) {
     if (!address) throw new Error('Connect the funding wallet first')
-    const remaining = Math.max((work.fundingGoal ?? 0) - (work.fundedAmount ?? 0), 0)
+    const amount = Number(fundAmount)
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter a positive funding amount')
     const pending = await callApi('/api/escrow/fund', {
       experimentSlug: work.slug ?? work.id,
       contractId: work.escrowContractId,
       signer: address,
       walletAddress: address,
-      amount: remaining || 1,
+      amount,
     })
     return submitSignedTransaction(pending.unsignedTransaction!, pending.pendingTransactionId!)
   }
@@ -199,7 +201,7 @@ export default function WorkDetail() {
   const isServiceProvider = Boolean(connected && work.roles?.serviceProvider?.toUpperCase() === connected)
   const isApprover = Boolean(connected && work.roles?.approver?.toUpperCase() === connected)
   const isReleaseSigner = Boolean(connected && work.roles?.releaseSigner?.toUpperCase() === connected)
-  const canCreateEscrow = !work.escrowContractId && (isCreator || (!work.creatorWallet && Boolean(address)))
+  const canCreateEscrow = !work.escrowContractId && Boolean(address)
   const canFundEscrow = Boolean(address && work.escrowContractId && (work.fundedAmount ?? 0) < (work.fundingGoal ?? 0))
   const roleSummary = [
     isCreator ? 'creator' : undefined,
@@ -407,21 +409,36 @@ export default function WorkDetail() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
-            <button
-              type="button"
-              disabled={isBusy || !canCreateEscrow}
-              onClick={() => runAction('Create escrow', () => createEscrow(work))}
-              style={operatorButtonStyle(isBusy || !canCreateEscrow)}
-            >
-              Create escrow
-            </button>
+            {!work.escrowContractId && (
+              <div className="font-geist-mono" style={{ color: '#ffcdc5', fontSize: '0.76rem', alignSelf: 'center' }}>
+                Submit from Start to create the Trustless Work escrow immediately.
+              </div>
+            )}
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', ...linkButtonStyle }}>
+              <span>Fund</span>
+              <input
+                value={fundAmount}
+                type="number"
+                min="0.01"
+                step="0.01"
+                onChange={(event) => setFundAmount(event.target.value)}
+                style={{
+                  width: '86px',
+                  border: '1px solid rgba(255,255,255,0.16)',
+                  background: 'rgba(0,0,0,0.28)',
+                  color: '#fff',
+                  padding: '6px 8px',
+                }}
+              />
+              <span>{work.currency ?? 'USDC'}</span>
+            </label>
             <button
               type="button"
               disabled={isBusy || !canFundEscrow}
               onClick={() => runAction('Fund escrow', () => fundEscrow(work))}
               style={operatorButtonStyle(isBusy || !canFundEscrow)}
             >
-              Fund remaining
+              Fund amount
             </button>
             {work.escrowContractId && (
               <>
@@ -432,7 +449,7 @@ export default function WorkDetail() {
                 >
                   Copy contract ID
                 </button>
-                <a href="https://viewer.trustlesswork.com/" target="_blank" rel="noreferrer" style={linkButtonStyle}>
+                <a href={work.escrowViewerUrl ?? `https://viewer.trustlesswork.com/${work.escrowContractId}`} target="_blank" rel="noreferrer" style={linkButtonStyle}>
                   Open Viewer
                 </a>
               </>

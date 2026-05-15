@@ -8,134 +8,61 @@ const testnet = "testnet" as const;
 
 const seededExperiments: Experiment[] = [
   {
-    id: "exp-waterwatch-cr",
-    title: "WaterWatch Costa Rica",
-    slug: "waterwatch-costa-rica",
+    id: "exp-community-water-quality-study",
+    title: "Community Water Quality Study",
+    slug: "community-water-quality-study",
     location: "Cartago, Costa Rica",
     category: "Water",
-    summary: "A school/community measures local water contamination and publishes open data for residents.",
-    problem:
-      "Small communities often suspect water contamination but lack transparent funding and verification to collect credible public data.",
-    methodology:
-      "Students and community members collect samples from predefined locations, record pH/turbidity/contamination indicators, publish raw measurements, and summarize findings in a public report.",
-    fundingGoal: 1000,
+    summary: "A community team measures water quality and publishes evidence for local residents.",
+    problem: "Residents need transparent local water quality data before they can advocate for remediation.",
+    methodology: "The team collects scheduled samples, records field measurements, uploads raw evidence, and publishes an open report.",
+    fundingGoal: 300,
     fundedAmount: 0,
     currency: "USDC",
     status: "funding",
     escrowType: "multi-release",
     escrow: {
       type: "multi-release",
-      engagementId: "openlab-waterwatch-costa-rica",
+      engagementId: "openlab-community-water-quality-study",
       network: testnet,
       mode: "real",
       balance: 0,
     },
     team: {
-      name: "WaterWatch Student Lab",
-      type: "school",
+      name: "Community Water Lab",
+      type: "community",
     },
     verifier: {
-      name: "University Science Mentor",
+      name: "Community Science Verifier",
       role: "Water quality reviewer",
     },
     disputeResolver: {
-      name: "OpenLab Review Council",
+      name: "EcoProof Review Council",
     },
     milestones: [
       {
-        id: "waterwatch-methodology",
+        id: "community-water-quality-study-milestone-1",
         index: 0,
-        title: "Methodology approved",
-        description: "Sampling design and safety plan are reviewed before field work starts.",
-        releasePercent: 20,
-        amount: 200,
+        title: "Sampling plan verified",
+        description: "Verifier reviews the water sampling map, safety checklist, and collection protocol.",
+        releasePercent: 50,
+        amount: 150,
         status: "locked",
-        deliverables: ["sampling plan", "locations", "variables to measure", "schedule", "safety checklist"],
+        deliverables: ["sampling map", "safety checklist", "collection protocol"],
         evidence: [],
       },
       {
-        id: "waterwatch-field-data",
+        id: "community-water-quality-study-milestone-2",
         index: 1,
-        title: "Field data collected",
-        description: "The team collects and uploads geotagged sample evidence and raw measurements.",
-        releasePercent: 40,
-        amount: 400,
+        title: "Open water report published",
+        description: "Project team publishes the field dataset, photos, and final community water report.",
+        releasePercent: 50,
+        amount: 150,
         status: "locked",
-        deliverables: ["geotagged photos", "raw measurements", "completed forms", "timestamps"],
-        evidence: [],
-      },
-      {
-        id: "waterwatch-open-report",
-        index: 2,
-        title: "Open report published",
-        description: "Cleaned data, charts, recommendations, and the public report are published.",
-        releasePercent: 40,
-        amount: 400,
-        status: "locked",
-        deliverables: ["cleaned dataset", "charts", "public report", "recommendations"],
+        deliverables: ["field dataset", "sample photos", "public report"],
         evidence: [],
       },
     ],
-    results: {
-      datasetUrl: "https://example.com/openlab/waterwatch/raw-measurements.csv",
-      reportUrl: "https://example.com/openlab/waterwatch/report.pdf",
-      chartData: [
-        { label: "Site A", value: 7.1 },
-        { label: "Site B", value: 6.8 },
-        { label: "Site C", value: 7.4 },
-      ],
-      summary: "Demo result set showing sample pH measurements across collection sites.",
-    },
-  },
-  {
-    id: "exp-air-quality-schools",
-    title: "Air Quality Around Schools",
-    slug: "air-quality-around-schools",
-    location: "San José, Costa Rica",
-    category: "Air",
-    summary: "Students place low-cost sensors near schools and publish a pollution snapshot.",
-    problem: "Families lack local measurements around school commute corridors.",
-    methodology: "Deploy sensors, collect readings at fixed intervals, and publish a comparison chart.",
-    fundingGoal: 750,
-    fundedAmount: 0,
-    currency: "USDC",
-    status: "draft",
-    escrowType: "multi-release",
-    escrow: {
-      type: "multi-release",
-      engagementId: "openlab-air-quality-around-schools",
-      network: testnet,
-      mode: "real",
-      balance: 0,
-    },
-    team: { name: "School Air Lab", type: "student" },
-    verifier: { name: "Environmental Science Mentor", role: "Air quality reviewer" },
-    milestones: [],
-  },
-  {
-    id: "exp-open-gps-bus-study",
-    title: "Open GPS Bus Study",
-    slug: "open-gps-bus-study",
-    location: "Cartago, Costa Rica",
-    category: "Mobility",
-    summary: "A civic team logs bus arrival times and publishes open mobility reliability data.",
-    problem: "Bus riders lack transparent reliability metrics for common routes.",
-    methodology: "Collect timestamped arrivals, compare against schedules, and publish delay distributions.",
-    fundingGoal: 600,
-    fundedAmount: 0,
-    currency: "USDC",
-    status: "draft",
-    escrowType: "multi-release",
-    escrow: {
-      type: "multi-release",
-      engagementId: "openlab-open-gps-bus-study",
-      network: testnet,
-      mode: "real",
-      balance: 0,
-    },
-    team: { name: "Open Mobility CR", type: "civic-team" },
-    verifier: { name: "Municipal Mobility Reviewer", role: "Transport data reviewer" },
-    milestones: [],
   },
 ];
 
@@ -179,16 +106,15 @@ export function requireExperimentBySlug(slug: string): Experiment {
 }
 
 export function createExperiment(input: CreateExperimentInput): Experiment {
-  if (experiments.some((experiment) => experiment.slug === slugify(input.title))) {
-    throw new Error(`Experiment already exists: ${slugify(input.title)}`);
-  }
-
   const totalMilestoneAmount = input.milestones.reduce((sum, milestone) => sum + milestone.amount, 0);
   if (Math.abs(totalMilestoneAmount - input.fundingGoal) > 0.000001) {
     throw new Error("Milestone amounts must add up to the funding goal");
   }
 
-  const slug = slugify(input.title);
+  const baseSlug = slugify(input.title);
+  const slug = experiments.some((experiment) => experiment.slug === baseSlug)
+    ? `${baseSlug}-${Date.now()}`
+    : baseSlug;
   const experiment: Experiment = {
     id: `exp-${slug}`,
     title: input.title,

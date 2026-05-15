@@ -4,14 +4,13 @@ import { useOpenLabProjects } from '../openlab-projects'
 import { shortWallet, useWallet } from '../wallet'
 
 const initialMilestones = [
-  { title: 'Methodology approved', description: 'Verifier reviews the study design and safety plan.', amount: 200, deliverables: 'sampling plan, safety checklist' },
-  { title: 'Field data submitted', description: 'Project team uploads raw measurements and collection evidence.', amount: 400, deliverables: 'dataset, photos, timestamps' },
-  { title: 'Open report published', description: 'Final report and cleaned dataset are published openly.', amount: 400, deliverables: 'report, cleaned dataset, charts' },
+  { title: 'Sampling plan verified', description: 'Verifier reviews the water sampling map, safety checklist, and collection protocol.', amount: 150, deliverables: 'sampling map, safety checklist, collection protocol' },
+  { title: 'Open water report published', description: 'Project team publishes the field dataset, photos, and final community water report.', amount: 150, deliverables: 'field dataset, sample photos, public report' },
 ]
 
 export default function NewExperiment() {
   const navigate = useNavigate()
-  const { address } = useWallet()
+  const { address, signTransaction } = useWallet()
   const { reloadProjects } = useOpenLabProjects()
   const [status, setStatus] = useState<string>()
   const [form, setForm] = useState({
@@ -21,7 +20,7 @@ export default function NewExperiment() {
     summary: 'A community team measures water quality and publishes evidence for local residents.',
     problem: 'Residents need transparent local water quality data before they can advocate for remediation.',
     methodology: 'The team collects scheduled samples, records field measurements, uploads raw evidence, and publishes an open report.',
-    fundingGoal: 1000,
+    fundingGoal: 300,
     approverWallet: '',
     releaseSignerWallet: '',
     disputeResolverWallet: '',
@@ -31,14 +30,12 @@ export default function NewExperiment() {
   async function submitProject(event: React.FormEvent) {
     event.preventDefault()
     if (!address) {
-      setStatus('Connect Freighter before submitting an experiment.')
+      setStatus('Connect a Stellar wallet before submitting an experiment.')
       return
     }
-    setStatus('Submitting experiment...')
-    const response = await fetch('/api/experiments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      setStatus('Submitting project...')
+      const payload = {
         ...form,
         creatorWallet: address,
         approverWallet: form.approverWallet || address,
@@ -48,15 +45,69 @@ export default function NewExperiment() {
           ...milestone,
           deliverables: milestone.deliverables.split(',').map((item) => item.trim()).filter(Boolean),
         })),
-      }),
-    })
-    const data = await response.json()
-    if (!response.ok || data.error) {
-      setStatus(data.error ?? `Failed to submit (${response.status})`)
-      return
+      }
+      const response = await fetch('/api/experiments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json()
+      if (!response.ok || data.error) {
+        setStatus(data.error ?? `Failed to submit (${response.status})`)
+        return
+      }
+
+      setStatus('Creating Trustless Work escrow...')
+      const escrowResponse = await fetch('/api/escrow/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          experimentSlug: data.project.slug,
+          signer: address,
+          walletAddress: address,
+          serviceProvider: payload.creatorWallet,
+          approver: payload.approverWallet,
+          platformAddress: address,
+          releaseSigner: payload.releaseSignerWallet,
+          disputeResolver: payload.disputeResolverWallet,
+          trustline: {
+            address: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
+            symbol: 'USDC',
+          },
+        }),
+      })
+      const escrowData = await escrowResponse.json()
+      if (!escrowResponse.ok || escrowData.error) {
+        setStatus(escrowData.error ?? `Project saved, escrow creation failed (${escrowResponse.status})`)
+        await reloadProjects()
+        navigate(`/work/${data.project.slug}`)
+        return
+      }
+
+      setStatus('Sign escrow creation in your wallet...')
+      const signedXdr = await signTransaction(escrowData.unsignedTransaction)
+      setStatus('Submitting signed escrow transaction...')
+      const txResponse = await fetch('/api/escrow/send-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pendingTransactionId: escrowData.pendingTransactionId,
+          signedXdr,
+        }),
+      })
+      const txData = await txResponse.json()
+      if (!txResponse.ok || txData.error) {
+        setStatus(txData.error ?? `Project saved, signed escrow submission failed (${txResponse.status})`)
+        await reloadProjects()
+        navigate(`/work/${data.project.slug}`)
+        return
+      }
+
+      await reloadProjects()
+      navigate(`/work/${data.project.slug}`)
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Failed to submit and create escrow')
     }
-    await reloadProjects()
-    navigate(`/work/${data.project.slug}`)
   }
 
   return (
@@ -99,7 +150,7 @@ export default function NewExperiment() {
           ))}
         </div>
 
-        <button type="submit" style={buttonStyle}>Submit project</button>
+        <button type="submit" style={buttonStyle}>Submit and create escrow</button>
         {status && <p className="font-geist-mono" style={{ color: status.includes('Failed') || status.includes('Connect') ? '#ffb4a8' : '#c8f7dc' }}>{status}</p>}
       </form>
     </main>

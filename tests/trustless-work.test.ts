@@ -22,15 +22,15 @@ describe("Trustless Work mapping", () => {
     resetExperimentsForTests();
   });
 
-  it("maps WaterWatch into a valid multi-release escrow deploy payload", () => {
-    const experiment = findExperimentBySlug("waterwatch-costa-rica");
+  it("maps the Community Water Quality Study into a valid multi-release escrow deploy payload", () => {
+    const experiment = findExperimentBySlug("community-water-quality-study");
     expect(experiment).toBeDefined();
 
     const payload = buildInitializeMultiReleaseEscrowPayload(experiment!, addresses);
 
     expect(payload.signer).toBe(addresses.signer);
-    expect(payload.engagementId).toBe("openlab-waterwatch-costa-rica");
-    expect(payload.title).toContain("WaterWatch Costa Rica");
+    expect(payload.engagementId).toBe("openlab-community-water-quality-study");
+    expect(payload.title).toContain("Community Water Quality Study");
     expect(payload.roles).toEqual({
       approver: addresses.approver,
       serviceProvider: addresses.serviceProvider,
@@ -41,15 +41,14 @@ describe("Trustless Work mapping", () => {
     expect(payload.platformFee).toBe(0);
     expect(payload.trustline).toEqual(addresses.trustline);
     expect(payload.milestones).toEqual([
-      expect.objectContaining({ amount: 200, receiver: addresses.serviceProvider }),
-      expect.objectContaining({ amount: 400, receiver: addresses.serviceProvider }),
-      expect.objectContaining({ amount: 400, receiver: addresses.serviceProvider }),
+      expect.objectContaining({ amount: 150, receiver: addresses.serviceProvider }),
+      expect.objectContaining({ amount: 150, receiver: addresses.serviceProvider }),
     ]);
   });
 
   it("builds Trustless Work viewer URLs from contract ids", () => {
     expect(buildViewerUrl("CONTRACT123", "https://viewer.trustlesswork.com")).toBe(
-      "https://viewer.trustlesswork.com/escrow/CONTRACT123",
+      "https://viewer.trustlesswork.com/CONTRACT123",
     );
   });
 });

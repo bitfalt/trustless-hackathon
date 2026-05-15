@@ -14,33 +14,33 @@ import {
   validateMilestoneOperation,
 } from "@/lib/experiments";
 
-const waterWatchSlug = "waterwatch-costa-rica";
+const waterWatchSlug = "community-water-quality-study";
 
 describe("OpenLab experiment domain", () => {
   beforeEach(() => {
     resetExperimentsForTests();
   });
 
-  it("seeds WaterWatch Costa Rica with three escrow milestones totaling 1,000 USDC", () => {
+  it("seeds Community Water Quality Study with two escrow milestones totaling 300 USDC", () => {
     const experiment = findExperimentBySlug(waterWatchSlug);
 
-    expect(experiment?.title).toBe("WaterWatch Costa Rica");
+    expect(experiment?.title).toBe("Community Water Quality Study");
     expect(experiment?.escrowType).toBe("multi-release");
-    expect(experiment?.fundingGoal).toBe(1000);
-    expect(experiment?.milestones).toHaveLength(3);
-    expect(experiment?.milestones.map((milestone) => milestone.releasePercent)).toEqual([20, 40, 40]);
-    expect(experiment?.milestones.reduce((sum, milestone) => sum + milestone.amount, 0)).toBe(1000);
+    expect(experiment?.fundingGoal).toBe(300);
+    expect(experiment?.milestones).toHaveLength(2);
+    expect(experiment?.milestones.map((milestone) => milestone.releasePercent)).toEqual([50, 50]);
+    expect(experiment?.milestones.reduce((sum, milestone) => sum + milestone.amount, 0)).toBe(300);
   });
 
   it("returns experiment list copies so API callers cannot mutate seeded state", () => {
     const [firstExperiment] = getExperiments();
     firstExperiment.title = "mutated";
 
-    expect(findExperimentBySlug(waterWatchSlug)?.title).toBe("WaterWatch Costa Rica");
+    expect(findExperimentBySlug(waterWatchSlug)?.title).toBe("Community Water Quality Study");
   });
 
   it("adds milestone evidence and moves the milestone to ready_for_review", () => {
-    const updated = addEvidenceToMilestone(waterWatchSlug, "waterwatch-methodology", [
+    const updated = addEvidenceToMilestone(waterWatchSlug, "community-water-quality-study-milestone-1", [
       {
         id: "evidence-test-methodology",
         type: "methodology",
@@ -50,7 +50,7 @@ describe("OpenLab experiment domain", () => {
       },
     ]);
 
-    const milestone = updated.milestones.find((item) => item.id === "waterwatch-methodology");
+    const milestone = updated.milestones.find((item) => item.id === "community-water-quality-study-milestone-1");
     expect(milestone?.status).toBe("ready_for_review");
     expect(milestone?.evidence.map((item) => item.title)).toContain("Sampling plan");
   });
@@ -64,26 +64,25 @@ describe("OpenLab experiment domain", () => {
       submittedAt: "2026-05-14T00:00:00.000Z",
     };
 
-    addEvidenceToMilestone(waterWatchSlug, "waterwatch-methodology", [evidence]);
+    addEvidenceToMilestone(waterWatchSlug, "community-water-quality-study-milestone-1", [evidence]);
 
-    expect(() => addEvidenceToMilestone(waterWatchSlug, "waterwatch-methodology", [evidence])).toThrow(
+    expect(() => addEvidenceToMilestone(waterWatchSlug, "community-water-quality-study-milestone-1", [evidence])).toThrow(
       /already exists/,
     );
   });
 
   it("marks Trustless Work approval separately from milestone fund release", () => {
-    const approved = approveMilestoneLocally(waterWatchSlug, "waterwatch-methodology", "tx-approve-1");
+    const approved = approveMilestoneLocally(waterWatchSlug, "community-water-quality-study-milestone-1", "tx-approve-1");
 
-    const milestone = approved.milestones.find((item) => item.id === "waterwatch-methodology");
+    const milestone = approved.milestones.find((item) => item.id === "community-water-quality-study-milestone-1");
     expect(milestone?.status).toBe("approved");
     expect(milestone?.trustlessWorkStatus).toContain("Approved");
     expect(milestone?.lastTransactionHash).toBe("tx-approve-1");
   });
 
   it("marks the experiment completed when all milestones have been released", () => {
-    releaseMilestoneLocally(waterWatchSlug, "waterwatch-methodology", "tx-release-1");
-    releaseMilestoneLocally(waterWatchSlug, "waterwatch-field-data", "tx-release-2");
-    const completed = releaseMilestoneLocally(waterWatchSlug, "waterwatch-open-report", "tx-release-3");
+    releaseMilestoneLocally(waterWatchSlug, "community-water-quality-study-milestone-1", "tx-release-1");
+    const completed = releaseMilestoneLocally(waterWatchSlug, "community-water-quality-study-milestone-2", "tx-release-2");
 
     expect(completed.status).toBe("completed");
   });
@@ -92,7 +91,7 @@ describe("OpenLab experiment domain", () => {
     expect(() =>
       validateMilestoneOperation({
         experimentSlug: waterWatchSlug,
-        milestoneId: "waterwatch-methodology",
+        milestoneId: "community-water-quality-study-milestone-1",
         milestoneIndex: 2,
       }),
     ).toThrow(/does not match milestone index/);
@@ -104,7 +103,7 @@ describe("OpenLab experiment domain", () => {
     expect(() =>
       validateMilestoneOperation({
         experimentSlug: waterWatchSlug,
-        milestoneId: "waterwatch-methodology",
+        milestoneId: "community-water-quality-study-milestone-1",
         milestoneIndex: 0,
         contractId: "CONTRACT_FAKE",
       }),
@@ -112,7 +111,7 @@ describe("OpenLab experiment domain", () => {
   });
 
   it("rejects overfunding locally so the UI cannot display false escrow balances", () => {
-    attachEscrowFunding(waterWatchSlug, 1000, "tx-fund-1");
+    attachEscrowFunding(waterWatchSlug, 300, "tx-fund-1");
 
     expect(() => attachEscrowFunding(waterWatchSlug, 1, "tx-fund-2")).toThrow(/exceeds remaining funding/);
   });
@@ -161,7 +160,7 @@ describe("OpenLab experiment domain", () => {
         approverWallet: "G_APPROVER",
         releaseSignerWallet: "G_RELEASE",
         disputeResolverWallet: "G_DISPUTE",
-        milestones: [{ title: "Only milestone", description: "Does not add up.", amount: 200, deliverables: ["x"] }],
+        milestones: [{ title: "Only milestone", description: "Does not add up.", amount: 150, deliverables: ["x"] }],
       }),
     ).toThrow(/funding goal/);
   });
