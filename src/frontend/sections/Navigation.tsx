@@ -11,8 +11,7 @@ const NAV_ITEMS = [
 
 export default function Navigation() {
   const [scrolled, setScrolled] = useState(false)
-  const [manualWallet, setManualWallet] = useState('')
-  const { address, connectWallet, useManualWallet } = useWallet()
+  const { address, connectWallet, error, isConnecting } = useWallet()
   const location = useLocation()
 
   useEffect(() => {
@@ -97,37 +96,44 @@ export default function Navigation() {
         ))}
       </div>
 
-      {/* Right CTA — pill button matching reference style */}
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-      <input
-        value={manualWallet}
-        onChange={(event) => setManualWallet(event.target.value)}
-        onBlur={() => manualWallet && useManualWallet(manualWallet)}
-        placeholder="Wallet"
-        aria-label="Wallet address"
-        style={{
-          width: 'min(28vw, 210px)',
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          color: '#fff',
-          padding: '9px 10px',
-          fontSize: '0.72rem',
-        }}
-      />
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', position: 'relative' }}>
       <button
         type="button"
         onClick={connectWallet}
+        disabled={isConnecting}
+        title={error || (address ? 'Connected Stellar wallet' : 'Connect Freighter wallet')}
         style={{
           color: '#ffffff',
           background: 'rgba(255,255,255,0.08)',
           border: '1px solid rgba(255,255,255,0.12)',
           padding: '9px 12px',
           fontSize: '0.72rem',
-          cursor: 'pointer',
+          cursor: isConnecting ? 'wait' : 'pointer',
+          opacity: isConnecting ? 0.7 : 1,
         }}
       >
-        {address ? shortWallet(address) : 'Connect'}
+        {isConnecting ? 'Connecting...' : address ? shortWallet(address) : 'Connect Wallet'}
       </button>
+      {error && (
+        <div
+          role="status"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            right: 0,
+            width: 'min(320px, 82vw)',
+            padding: '10px 12px',
+            background: 'rgba(20,10,10,0.94)',
+            border: '1px solid rgba(255,180,168,0.32)',
+            color: '#ffcdc5',
+            fontSize: '0.72rem',
+            lineHeight: 1.4,
+            zIndex: 5,
+          }}
+        >
+          {error}
+        </div>
+      )}
       <Link
         to="/experiments/new"
         style={{

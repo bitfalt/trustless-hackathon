@@ -31,7 +31,7 @@ export default function NewExperiment() {
   async function submitProject(event: React.FormEvent) {
     event.preventDefault()
     if (!address) {
-      setStatus('Connect or paste a wallet before submitting an experiment.')
+      setStatus('Connect Freighter before submitting an experiment.')
       return
     }
     setStatus('Submitting experiment...')
