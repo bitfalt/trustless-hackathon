@@ -38,7 +38,7 @@ export type InitializeMultiReleaseEscrowInput = {
 export type FundEscrowPayload = {
   contractId: string;
   signer: string;
-  amount: string;
+  amount: number;
 };
 
 export type CompleteMilestonePayload = {

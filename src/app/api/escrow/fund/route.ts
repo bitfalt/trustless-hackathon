@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const result = await createTrustlessWorkClientFromEnv().fundEscrow({
       contractId: input.contractId,
       signer: input.signer,
-      amount,
+      amount: amountNumber,
     });
     const pendingTransaction = createPendingTransaction({
       operation: "fund_escrow",

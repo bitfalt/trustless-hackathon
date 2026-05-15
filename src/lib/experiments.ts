@@ -223,6 +223,7 @@ export function attachEscrowCreation(
   experimentSlug: string,
   contractId: string,
   transactionHash?: string,
+  mode?: EscrowMetadata["mode"],
 ): Experiment {
   const experiment = requireExperimentBySlug(experimentSlug);
   const viewerUrl = buildViewerUrl(contractId);
@@ -232,6 +233,7 @@ export function attachEscrowCreation(
     ...experiment.escrow,
     contractId,
     viewerUrl,
+    mode: mode ?? experiment.escrow.mode,
     createdTransactionHash: transactionHash,
     lastOperation: "create_escrow",
     lastTransactionHash: transactionHash,

@@ -83,7 +83,7 @@ describe("TrustlessWorkClient", () => {
       demoMode: true,
     });
 
-    const result = await client.fundEscrow({ contractId: "CONTRACT123", signer: "G_SIGNER", amount: "1000" });
+    const result = await client.fundEscrow({ contractId: "CONTRACT123", signer: "G_SIGNER", amount: 1000 });
 
     expect(result.unsignedTransaction).toContain("OPENLAB_DEMO_UNSIGNED_XDR");
     expect(result.raw).toEqual(expect.objectContaining({ mode: "demo" }));

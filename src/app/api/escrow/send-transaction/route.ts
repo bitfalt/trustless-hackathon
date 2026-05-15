@@ -46,7 +46,7 @@ export async function POST(request: Request) {
           { status: 502 },
         );
       }
-      experiment = attachEscrowCreation(pending.experimentSlug, contractId, transactionHash);
+      experiment = attachEscrowCreation(pending.experimentSlug, contractId, transactionHash, escrowModeForSubmittedTransaction(tx.status));
     }
 
     if (pending.operation === "fund_escrow") {
@@ -81,6 +81,12 @@ export async function POST(request: Request) {
   } catch (error) {
     return errorResponse(error);
   }
+}
+
+function escrowModeForSubmittedTransaction(status?: string): "real" | "demo" {
+  if (status === "demo_submitted") return "demo";
+  if (process.env.TRUSTLESS_WORK_API_KEY && process.env.OPENLAB_ESCROW_MODE !== "demo") return "real";
+  return "demo";
 }
 
 function demoContractIdForCreate(pendingTransactionId: string, status?: string): string | undefined {
