@@ -1,24 +1,122 @@
-# OpenLab — Trustless Hackathon Backend
+# EcoProof
 
-OpenLab funds citizen-science and public-interest experiments through Trustless Work milestone escrow.
+EcoProof is a Trustless Work-powered platform for funding and verifying real-world science experiments. Project teams submit experiments, funders deposit USDC into milestone escrow, service providers submit evidence, verifiers approve milestones, and release signers release funds through Trustless Work on Stellar testnet.
 
-**Tagline:** Fund science. Verify evidence. Unlock impact.
+The product goal is simple: **fund science with public proof and milestone-based escrow instead of trust.**
 
-This repo contains the integrated Next.js MVP: the React frontend, OpenLab domain routes, and Trustless Work escrow integration live in one app.
+## What This App Includes
 
-## MVP demo
+This repository is a single integrated Next.js app:
 
-The seeded demo experiment is **WaterWatch Costa Rica**: a school/community measures local water contamination, submits methodology/data/report evidence, and receives milestone payments only after verifier approval.
+- public landing page and project explorer
+- experiment submission flow at `/experiments/new`
+- wallet-aware project detail page at `/work/:slug`
+- server-side Trustless Work API client
+- role-gated escrow and milestone API routes
+- local JSON persistence for hackathon/demo state
+- Freighter-based Stellar testnet signing path
 
-Funding target: **1,000 USDC**
+There is no fake Trustless Work mode. If `TRUSTLESS_WORK_API_KEY` is missing or invalid, Trustless Work calls fail loudly.
 
-Milestones:
+## Product Flow
 
-1. **Methodology approved** — 20% / 200 USDC
-2. **Field data collected** — 40% / 400 USDC
-3. **Open report published** — 40% / 400 USDC
+1. A creator connects a Stellar testnet wallet.
+2. The creator submits an experiment with funding goal, methodology, verifier wallet, release signer wallet, dispute resolver wallet, and milestones.
+3. The creator creates a Trustless Work multi-release escrow.
+4. Freighter signs the unsigned XDR returned by Trustless Work.
+5. The backend submits the signed XDR through Trustless Work and stores the real contract ID.
+6. A funder wallet funds the escrow.
+7. The service provider submits evidence and marks a milestone complete.
+8. The approver wallet approves the milestone.
+9. The release signer wallet releases funds.
+10. The live escrow can be inspected in the Trustless Work Viewer.
 
-## Backend architecture
+## Required Environment
+
+Create `.env.local` in the project root:
+
+```env
+TRUSTLESS_WORK_API_BASE_URL=https://dev.api.trustlesswork.com
+TRUSTLESS_WORK_API_KEY=your_trustless_work_testnet_api_key
+```
+
+That is the complete required env surface. Role wallets are collected in the UI when creating a project or creating escrow.
+
+## Local Setup
+
+```bash
+npm install
+npm run dev
+```
+
+Open:
+
+```txt
+http://localhost:3000
+```
+
+If port `3000` is busy, Next will print the alternate local URL.
+
+## Testnet Wallet Setup
+
+For a real end-to-end demo, prepare Stellar testnet wallets in Freighter:
+
+- creator / service provider
+- funder
+- approver / verifier
+- release signer
+- dispute resolver
+
+For a quick demo, some roles can use the same wallet, but role gating is enforced by wallet address. The wallet connected in the browser must match the stored role for that action.
+
+Each wallet that signs transactions needs testnet XLM. The funder also needs the correct testnet USDC trustline and testnet USDC balance. The app currently uses this testnet USDC trustline issuer by default:
+
+```txt
+GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5
+```
+
+## Demo Script
+
+1. Start the app with `.env.local` configured.
+2. Connect Freighter on Stellar testnet.
+3. Click `Start` in the nav or hero.
+4. Submit an experiment at `/experiments/new`.
+5. On the project detail page, create the escrow with the creator wallet.
+6. Approve the Freighter signing prompt.
+7. Copy the contract ID shown in the project detail page.
+8. Open [Trustless Work Viewer](https://viewer.trustlesswork.com/) and paste the contract ID.
+9. Connect the funder wallet and fund the escrow.
+10. Connect the service provider wallet, submit evidence, and complete milestone 1.
+11. Connect the approver wallet and approve milestone 1.
+12. Connect the release signer wallet and release milestone 1 funds.
+13. Refresh the Trustless Work Viewer to show the live escrow state.
+
+## Role Rules
+
+The UI and backend both enforce roles:
+
+- creator: can create escrow for their submitted experiment
+- funder: any connected wallet can fund an existing escrow
+- service provider: can submit evidence and complete milestones
+- approver: can approve milestones
+- release signer: can release milestone funds
+- everyone else: read-only project inspection
+
+The frontend hides or disables unavailable actions. The backend also rejects mismatched wallets, so role checks do not rely on UI state only.
+
+## Important Limitations
+
+This is hackathon-grade but real-testnet focused.
+
+Known gaps:
+
+- Evidence upload stores metadata and URL only; it does not upload files to IPFS/Supabase yet.
+- Local experiment and pending transaction state are JSON-backed, not a production database.
+- Non-transaction evidence submission checks wallet address, but does not yet require a signed auth message. Production should add wallet message signing for non-XDR actions.
+- The project explorer reads local submitted projects; it does not yet auto-index all live Trustless Work escrows by organization wallet.
+- Trustless Work Viewer does not support direct `/escrow/:id` deep links reliably; use the Viewer root and paste the contract ID.
+
+## Architecture
 
 ```txt
 src/
@@ -30,44 +128,34 @@ src/
       escrow/fund/route.ts
       escrow/send-transaction/route.ts
       escrow/[contractId]/route.ts
+      escrow/discover/route.ts
       milestones/[id]/submit-evidence/route.ts
       milestones/[id]/complete/route.ts
       milestones/[id]/approve/route.ts
       milestones/[id]/release/route.ts
       verifier/reviews/route.ts
+    experiments/new/page.tsx
+    work/[id]/page.tsx
+  frontend/
+    pages/NewExperiment.tsx
+    pages/WorkDetail.tsx
+    wallet.tsx
+    openlab-projects.tsx
   lib/
-    api.ts
     experiments.ts
+    openlab-config.ts
+    openlab-view-model.ts
+    pending-transactions.ts
+    trustless-work/client.ts
+    trustless-work/openlab-mapper.ts
     types.ts
-    trustless-work/
-      client.ts
-      openlab-mapper.ts
-      types.ts
 ```
 
-The backend keeps OpenLab's domain model separate from Trustless Work API calls:
+## Trustless Work API Usage
 
-- `src/lib/experiments.ts` owns seeded experiments, evidence, and local milestone state.
-- `src/lib/trustless-work/openlab-mapper.ts` maps OpenLab experiments to Trustless Work multi-release escrow payloads.
-- `src/lib/trustless-work/client.ts` centralizes all Trustless Work API calls and keeps the API key server-side.
-- API route handlers validate request payloads with `zod` and return frontend-friendly JSON.
+The server calls Trustless Work with `x-api-key` from `TRUSTLESS_WORK_API_KEY`.
 
-## Trustless Work lifecycle
-
-The app follows the Trustless Work transaction pattern:
-
-1. Backend builds a payload and calls Trustless Work.
-2. Trustless Work returns an unsigned transaction/XDR.
-3. Frontend wallet signs the XDR.
-4. Frontend posts the signed XDR to `/api/escrow/send-transaction`.
-5. Backend submits the signed transaction to Trustless Work.
-6. Backend stores normalized local state such as contract ID, transaction hash, milestone status, and viewer URL.
-
-No private keys are stored or used by the backend.
-
-## Trustless Work endpoints used
-
-From `trustless-work-dev-skill` and `escrow-lab`:
+Used endpoints:
 
 - `POST /deployer/multi-release`
 - `POST /escrow/multi-release/fund-escrow`
@@ -75,237 +163,83 @@ From `trustless-work-dev-skill` and `escrow-lab`:
 - `POST /escrow/multi-release/approve-milestone`
 - `POST /escrow/multi-release/release-milestone-funds`
 - `POST /helper/send-transaction`
+- `POST /indexer/update-from-txHash`
+- `GET /helper/get-escrow-by-contract-ids`
+- `GET /helper/get-escrows-by-role`
+- `GET /helper/get-escrows-by-signer`
 
-Current multi-release docs specify the `x-api-key` header.
-
-## Environment setup
-
-Copy `.env.example` to `.env.local`:
-
-```bash
-cp .env.example .env.local
-```
-
-Required for real Trustless Work calls:
-
-```txt
-TRUSTLESS_WORK_API_BASE_URL=https://dev.api.trustlesswork.com
-TRUSTLESS_WORK_API_KEY=***
-TRUSTLESS_WORK_NETWORK=testnet
-OPENLAB_PLATFORM_ADDRESS=replace_with_stellar_wallet
-OPENLAB_RELEASE_SIGNER_ADDRESS=replace_with_stellar_wallet
-OPENLAB_DISPUTE_RESOLVER_ADDRESS=replace_with_stellar_wallet
-OPENLAB_USDC_TRUSTLINE_ADDRESS=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
-NEXT_PUBLIC_ESCROW_VIEWER_BASE_URL=https://viewer.trustlesswork.com
-```
-
-`POST /api/escrow/create` now defaults `platformAddress`, `releaseSigner`, `disputeResolver`, and `trustline` from these env vars. The frontend only has to provide them explicitly if it needs to override the demo defaults.
-
-For local frontend development without a Trustless Work key, set:
-
-```txt
-OPENLAB_ESCROW_MODE=demo
-```
-
-Demo mode returns deterministic fake unsigned XDR strings and is clearly labeled in the response. Leave it unset for real Trustless Work calls.
-
-## API routes
+## API Routes
 
 ### `GET /api/experiments`
 
-Returns seeded OpenLab experiments.
+Returns local experiments and frontend project cards.
+
+### `POST /api/experiments`
+
+Creates a new local experiment draft. Milestone amounts must add up to `fundingGoal`.
 
 ### `GET /api/experiments/:slug`
 
-Returns one experiment with milestones, evidence, escrow metadata, and result links.
-
-Example:
-
-```bash
-curl http://localhost:3000/api/experiments/waterwatch-costa-rica
-```
+Returns one experiment and its frontend project card.
 
 ### `POST /api/escrow/create`
 
-Builds a Trustless Work multi-release escrow payload and returns unsigned XDR for wallet signing.
-
-Request. `platformAddress`, `releaseSigner`, `disputeResolver`, and `trustline` are optional if the corresponding `OPENLAB_*` env vars are configured:
-
-```json
-{
-  "experimentSlug": "waterwatch-costa-rica",
-  "signer": "G...FUNDER_OR_DEPLOYER",
-  "serviceProvider": "G...TEAM",
-  "approver": "G...VERIFIER",
-  "platformAddress": "G...OPENLAB",
-  "releaseSigner": "G...RELEASE_SIGNER",
-  "disputeResolver": "G...RESOLVER",
-  "trustline": {
-    "address": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
-    "symbol": "USDC"
-  }
-}
-```
-
-Response includes:
-
-- `operation: "create_escrow"`
-- `pendingTransactionId` — required when submitting the signed XDR
-- `pendingTransactionExpiresAt`
-- `payload`
-- `unsignedTransaction`
-- `raw`
+Builds a Trustless Work multi-release escrow and returns unsigned XDR. The connected creator wallet must match the experiment creator when the experiment has a creator wallet.
 
 ### `POST /api/escrow/fund`
 
-Returns unsigned XDR to fund a deployed multi-release escrow. The amount is required and must not exceed the experiment's remaining funding target.
-
-Request:
-
-```json
-{
-  "experimentSlug": "waterwatch-costa-rica",
-  "contractId": "C...",
-  "signer": "G...FUNDER",
-  "amount": 1000
-}
-```
+Builds unsigned XDR for funding an existing escrow. The signer must match the connected wallet.
 
 ### `POST /api/escrow/send-transaction`
 
-Submits signed XDR through Trustless Work and updates local OpenLab state using the server-side `pendingTransactionId` created by the unsigned-XDR route. The frontend should not send operation, amount, milestone ID, or contract metadata here; those are stored server-side to avoid false local state.
-
-Request:
-
-```json
-{
-  "signedXdr": "AAAA...SIGNED",
-  "pendingTransactionId": "ptx_..."
-}
-```
-
-The pending transaction is consumed exactly once and expires after 15 minutes. For create-escrow transactions, the backend only attaches the contract ID if Trustless Work returns it; demo mode generates a clearly labeled demo contract ID.
-
-Supported pending operations:
-
-- `create_escrow`
-- `fund_escrow`
-- `complete_milestone`
-- `approve_milestone`
-- `release_milestone`
+Submits signed XDR to Trustless Work and applies the corresponding pending operation locally. Pending transactions expire after 15 minutes and are stored server-side so the client cannot fake operation metadata.
 
 ### `GET /api/escrow/:contractId`
 
-Queries Trustless Work for canonical escrow state with `validateOnChain=true` by default.
+Fetches canonical escrow state from Trustless Work by contract ID.
 
-Example:
+### `GET /api/escrow/discover`
 
-```bash
-curl http://localhost:3000/api/escrow/C...CONTRACT_ID
-```
-
-Pass `?validateOnChain=false` only when you need a faster non-chain-validated read.
-
-### `GET /api/verifier/reviews`
-
-Returns pending verifier review items assembled from local OpenLab state. This is the backend surface for the verifier dashboard UI.
-
-Example:
-
-```bash
-curl http://localhost:3000/api/verifier/reviews
-```
+Discovers Trustless Work escrows by contract IDs, signer, or role/address.
 
 ### `POST /api/milestones/:id/submit-evidence`
 
-Stores evidence locally and marks the milestone `ready_for_review`. This does **not** release funds.
-
-Request:
-
-```json
-{
-  "experimentSlug": "waterwatch-costa-rica",
-  "evidence": [
-    {
-      "id": "evidence-methodology-plan",
-      "type": "methodology",
-      "title": "Sampling Plan PDF",
-      "url": "https://example.com/sampling-plan.pdf"
-    }
-  ],
-  "notes": "Initial methodology package for verifier review."
-}
-```
+Stores evidence metadata locally. Requires the connected wallet to be the service provider.
 
 ### `POST /api/milestones/:id/complete`
 
-Calls Trustless Work `complete-milestone` and returns unsigned XDR for the service provider/team wallet.
-
-Request:
-
-```json
-{
-  "experimentSlug": "waterwatch-costa-rica",
-  "contractId": "C...",
-  "signer": "G...TEAM",
-  "milestoneIndex": 0
-}
-```
+Builds unsigned XDR for milestone completion. Requires service provider wallet.
 
 ### `POST /api/milestones/:id/approve`
 
-Calls Trustless Work `approve-milestone` and returns unsigned XDR for the verifier wallet. After the signed approval transaction is submitted, the backend marks the local milestone as `approved`; funds are released by the explicit release route.
-
-Request:
-
-```json
-{
-  "experimentSlug": "waterwatch-costa-rica",
-  "contractId": "C...",
-  "approver": "G...VERIFIER",
-  "milestoneIndex": 0
-}
-```
+Builds unsigned XDR for milestone approval. Requires approver wallet.
 
 ### `POST /api/milestones/:id/release`
 
-Explicit milestone release route. Trustless Work testnet exposes this as `POST /escrow/multi-release/release-milestone-funds`.
+Builds unsigned XDR for milestone fund release. Requires release signer wallet.
 
-Request:
+### `GET /api/verifier/reviews`
 
-```json
-{
-  "experimentSlug": "waterwatch-costa-rica",
-  "contractId": "C...",
-  "releaseSigner": "G...RELEASE_SIGNER",
-  "milestoneIndex": 0
-}
+Returns local milestones marked `ready_for_review`.
+
+## Local Persistence
+
+Local state is stored in ignored files:
+
+```txt
+.openlab-data.json
+.openlab-pending-transactions.json
 ```
 
-## Frontend integration notes
-
-A React frontend should:
-
-1. Fetch experiments from `/api/experiments`.
-2. Render WaterWatch from `/api/experiments/waterwatch-costa-rica`.
-3. Call `/api/escrow/create` to get unsigned XDR.
-4. Sign unsigned XDR with the user's Stellar wallet.
-5. Send signed XDR to `/api/escrow/send-transaction` with the returned `pendingTransactionId`.
-6. Use `/api/milestones/:id/submit-evidence` for team submissions.
-7. Use `/api/verifier/reviews` to populate the verifier dashboard.
-8. Use `/api/milestones/:id/complete` and `/api/milestones/:id/approve` for milestone lifecycle. The route validates that `:id` matches the submitted milestone index and experiment escrow contract.
-9. Use `/api/escrow/:contractId` when the UI needs canonical Trustless Work escrow state.
-10. Use `/api/escrow/discover?contractIds=C...` or the `role/address` and `signer` filters to discover canonical Trustless Work testnet escrows.
-11. Refresh the experiment after each signed transaction.
-
-## Local development
+Delete them to start from a clean local state:
 
 ```bash
-npm install
-npm run dev
+rm -f .openlab-data.json .openlab-pending-transactions.json
 ```
 
-Validation:
+If you need seeded experiments for tests or local inspection, the test suite calls the seed reset directly. The running app does not depend on fake/demo escrow behavior.
+
+## Validation Commands
 
 ```bash
 npm test
@@ -313,56 +247,17 @@ npm run typecheck
 npm run build
 ```
 
-## Local state persistence
+Current expected status:
 
-For hackathon reliability, local experiment state is persisted to a JSON file so evidence, escrow IDs, funding state, and milestone transitions survive a local server restart.
+- tests pass
+- typecheck passes
+- build passes
+- build may warn that the Next.js ESLint plugin is not configured
 
-Default file:
+## Security Notes
 
-```txt
-.openlab-data.json
-```
-
-Override it with:
-
-```txt
-OPENLAB_DATA_FILE=/absolute/path/to/openlab-data.json
-```
-
-This is suitable for local/demo deployments. For production, replace this repository layer with Supabase/Postgres while keeping the same domain/API contract.
-
-## Real vs demo
-
-Real mode:
-
-- default when `OPENLAB_ESCROW_MODE` is unset
-- requires `TRUSTLESS_WORK_API_KEY`
-- calls the real Trustless Work API
-- returns real unsigned XDR
-- submits signed XDR through `/helper/send-transaction`
-
-Demo mode:
-
-- enabled only with `OPENLAB_ESCROW_MODE=demo`
-- does not call Trustless Work
-- returns fake unsigned XDR for UI development
-- should be labeled as demo in any presentation if used
-
-## Docs inspected
-
-Implementation was based on:
-
-- `Trustless-Work/trustless-work-dev-skill`
-  - `skills/api/core-concepts.md`
-  - `skills/api/multi-release-escrow.md`
-  - `skills/api/types.md`
-  - `skills/api/trustlines.md`
-- `Trustless-Work/escrow-lab`
-  - references for hooks and current operation names
-
-## Security notes
-
-- `TRUSTLESS_WORK_API_KEY` is only read by server-side route handlers.
-- No private keys are stored.
-- Wallet signing belongs in the browser/frontend.
-- `.env.local` is ignored and must not be committed.
+- The Trustless Work API key stays server-side.
+- Private keys are never stored by the app.
+- Real transaction signing happens in the browser wallet.
+- `.env.local` and local state files are ignored and must not be committed.
+- Production should replace local JSON persistence with a database and add signed wallet auth for non-transaction actions.
