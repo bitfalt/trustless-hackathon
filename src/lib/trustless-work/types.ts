@@ -67,6 +67,21 @@ export type ReleaseMilestonePayload = {
   releaseSigner: string;
 };
 
+export type GetEscrowsByRoleParams = {
+  role: string;
+  address: string;
+  type?: "single-release" | "multi-release" | string;
+};
+
+export type GetEscrowsBySignerParams = {
+  signer: string;
+  type?: "single-release" | "multi-release" | string;
+};
+
+export type UpdateFromTransactionHashPayload = {
+  txHash: string;
+};
+
 export type SendTransactionPayload = {
   signedXdr: string;
 };

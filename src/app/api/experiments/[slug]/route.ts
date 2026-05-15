@@ -1,5 +1,6 @@
 import { findExperimentBySlug } from "@/lib/experiments";
 import { ok } from "@/lib/api";
+import { experimentToProjectCard } from "@/lib/openlab-view-model";
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
@@ -11,5 +12,5 @@ export async function GET(_request: Request, context: RouteContext) {
     return ok({ error: "Experiment not found" }, { status: 404 });
   }
 
-  return ok({ experiment });
+  return ok({ experiment, project: experimentToProjectCard(experiment) });
 }

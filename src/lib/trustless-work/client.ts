@@ -3,12 +3,15 @@ import type {
   ChangeMilestoneStatusPayload,
   CompleteMilestonePayload,
   FundEscrowPayload,
+  GetEscrowsByRoleParams,
+  GetEscrowsBySignerParams,
   InitializeMultiReleaseEscrowPayload,
   ReleaseMilestonePayload,
   SendTransactionPayload,
   SendTransactionResponse,
   TrustlessWorkClientOptions,
   UnsignedTransactionResponse,
+  UpdateFromTransactionHashPayload,
 } from "@/lib/trustless-work/types";
 
 type JsonObject = Record<string, unknown>;
@@ -60,7 +63,7 @@ export class TrustlessWorkClient {
   }
 
   releaseMilestone(payload: ReleaseMilestonePayload): Promise<UnsignedTransactionResponse> {
-    return this.postUnsigned("/escrow/multi-release/release-milestone", payload);
+    return this.postUnsigned("/escrow/multi-release/release-milestone-funds", payload);
   }
 
   getEscrowsByContractIds(contractIds: string[], validateOnChain = true): Promise<unknown> {
@@ -69,6 +72,18 @@ export class TrustlessWorkClient {
       validateOnChain: String(validateOnChain),
     });
     return this.get(`/helper/get-escrow-by-contract-ids?${params.toString()}`);
+  }
+
+  getEscrowsByRole(params: GetEscrowsByRoleParams): Promise<unknown> {
+    return this.get(`/helper/get-escrows-by-role?${toSearchParams(params)}`);
+  }
+
+  getEscrowsBySigner(params: GetEscrowsBySignerParams): Promise<unknown> {
+    return this.get(`/helper/get-escrows-by-signer?${toSearchParams(params)}`);
+  }
+
+  updateFromTransactionHash(payload: UpdateFromTransactionHashPayload): Promise<unknown> {
+    return this.post("/indexer/update-from-txHash", payload);
   }
 
   async sendTransaction(payload: SendTransactionPayload): Promise<SendTransactionResponse> {
@@ -155,12 +170,21 @@ export class TrustlessWorkClient {
   }
 }
 
-export function createTrustlessWorkClientFromEnv(): TrustlessWorkClient {
+export function createTrustlessWorkClientFromEnv(fetcher?: typeof fetch): TrustlessWorkClient {
   return new TrustlessWorkClient({
-    apiBaseUrl: process.env.TRUSTLESS_WORK_API_BASE_URL ?? "https://api.trustlesswork.com",
+    apiBaseUrl: process.env.TRUSTLESS_WORK_API_BASE_URL || "https://dev.api.trustlesswork.com",
     apiKey: process.env.TRUSTLESS_WORK_API_KEY,
+    fetcher,
     demoMode: process.env.OPENLAB_ESCROW_MODE === "demo",
   });
+}
+
+function toSearchParams(params: Record<string, string | undefined>): string {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") searchParams.set(key, value);
+  });
+  return searchParams.toString();
 }
 
 function extractFirstString(data: JsonObject, keys: string[]): string | undefined {

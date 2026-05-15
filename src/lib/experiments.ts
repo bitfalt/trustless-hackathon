@@ -192,7 +192,7 @@ export function approveMilestoneLocally(
   milestoneId: string,
   transactionHash?: string,
 ): Experiment {
-  return releaseMilestoneLocally(experimentSlug, milestoneId, transactionHash, "Approved and Released through Trustless Work");
+  return updateMilestoneStatus(experimentSlug, milestoneId, "approved", "Approved through Trustless Work", transactionHash);
 }
 
 export function releaseMilestoneLocally(

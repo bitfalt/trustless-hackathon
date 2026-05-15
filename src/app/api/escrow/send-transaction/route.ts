@@ -24,9 +24,15 @@ export async function POST(request: Request) {
       return ok({ error: "Pending transaction not found, expired, or already consumed" }, { status: 400 });
     }
 
-    const tx = await createTrustlessWorkClientFromEnv().sendTransaction({ signedXdr: input.signedXdr });
+    const client = createTrustlessWorkClientFromEnv();
+    const tx = await client.sendTransaction({ signedXdr: input.signedXdr });
     consumePendingTransaction(input.pendingTransactionId);
     const transactionHash = tx.transactionHash;
+    const canonicalUpdate = transactionHash
+      ? await client.updateFromTransactionHash({ txHash: transactionHash }).catch((error) => ({
+          error: error instanceof Error ? error.message : "Failed to refresh Trustless Work indexer state",
+        }))
+      : undefined;
     let experiment = undefined;
 
     if (pending.operation === "create_escrow") {
@@ -68,6 +74,7 @@ export async function POST(request: Request) {
       operation: pending.operation,
       pendingTransactionId: pending.id,
       transaction: tx,
+      canonicalUpdate,
       experiment,
     });
   } catch (error) {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { findExperimentBySlug } from "@/lib/experiments";
-import { TrustlessWorkClient } from "@/lib/trustless-work/client";
+import { TrustlessWorkClient, createTrustlessWorkClientFromEnv } from "@/lib/trustless-work/client";
 import { buildInitializeMultiReleaseEscrowPayload, buildViewerUrl } from "@/lib/trustless-work/openlab-mapper";
 
 const addresses = {
@@ -51,6 +51,32 @@ describe("Trustless Work mapping", () => {
 });
 
 describe("TrustlessWorkClient", () => {
+  it("defaults real Trustless Work calls to the testnet API base", async () => {
+    const originalBaseUrl = process.env.TRUSTLESS_WORK_API_BASE_URL;
+    const originalApiKey = process.env.TRUSTLESS_WORK_API_KEY;
+    const originalEscrowMode = process.env.OPENLAB_ESCROW_MODE;
+    process.env.TRUSTLESS_WORK_API_BASE_URL = "";
+    process.env.TRUSTLESS_WORK_API_KEY = "secret-key";
+    delete process.env.OPENLAB_ESCROW_MODE;
+
+    const fetcher = vi.fn(async () => new Response(JSON.stringify([{ contractId: "CONTRACT123" }]), { status: 200 }));
+    const client = createTrustlessWorkClientFromEnv(fetcher);
+
+    await client.getEscrowsByContractIds(["CONTRACT123"]);
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://dev.api.trustlesswork.com/helper/get-escrow-by-contract-ids?contractIds=CONTRACT123&validateOnChain=true",
+      expect.any(Object),
+    );
+
+    if (originalBaseUrl === undefined) delete process.env.TRUSTLESS_WORK_API_BASE_URL;
+    else process.env.TRUSTLESS_WORK_API_BASE_URL = originalBaseUrl;
+    if (originalApiKey === undefined) delete process.env.TRUSTLESS_WORK_API_KEY;
+    else process.env.TRUSTLESS_WORK_API_KEY = originalApiKey;
+    if (originalEscrowMode === undefined) delete process.env.OPENLAB_ESCROW_MODE;
+    else process.env.OPENLAB_ESCROW_MODE = originalEscrowMode;
+  });
+
   it("can create deterministic demo unsigned transactions without an API key", async () => {
     const client = new TrustlessWorkClient({
       apiBaseUrl: "https://api.trustlesswork.com",
@@ -119,6 +145,68 @@ describe("TrustlessWorkClient", () => {
       expect.objectContaining({
         method: "GET",
         headers: expect.objectContaining({ "x-api-key": "secret-key" }),
+      }),
+    );
+  });
+
+  it("uses current multi-release release endpoint", async () => {
+    const fetcher = vi.fn(async () =>
+      new Response(JSON.stringify({ unsignedTransaction: "AAAA_UNSIGNED_XDR" }), { status: 200 }),
+    );
+    const client = new TrustlessWorkClient({
+      apiBaseUrl: "https://dev.api.trustlesswork.com",
+      apiKey: "secret-key",
+      fetcher,
+    });
+
+    await client.releaseMilestone({
+      contractId: "CONTRACT123",
+      milestoneIndex: "0",
+      releaseSigner: "G_RELEASE",
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://dev.api.trustlesswork.com/escrow/multi-release/release-milestone-funds",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("queries Trustless Work discovery helpers by role and signer", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify([{ contractId: "CONTRACT123" }]), { status: 200 }));
+    const client = new TrustlessWorkClient({
+      apiBaseUrl: "https://dev.api.trustlesswork.com",
+      apiKey: "secret-key",
+      fetcher,
+    });
+
+    await client.getEscrowsByRole({ role: "serviceProvider", address: "G_PROVIDER", type: "multi-release" });
+    await client.getEscrowsBySigner({ signer: "G_SIGNER", type: "multi-release" });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://dev.api.trustlesswork.com/helper/get-escrows-by-role?role=serviceProvider&address=G_PROVIDER&type=multi-release",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://dev.api.trustlesswork.com/helper/get-escrows-by-signer?signer=G_SIGNER&type=multi-release",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("requests indexer refresh from a transaction hash", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({ updated: true }), { status: 200 }));
+    const client = new TrustlessWorkClient({
+      apiBaseUrl: "https://dev.api.trustlesswork.com",
+      apiKey: "secret-key",
+      fetcher,
+    });
+
+    await client.updateFromTransactionHash({ txHash: "TX_HASH" });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://dev.api.trustlesswork.com/indexer/update-from-txHash",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ txHash: "TX_HASH" }),
       }),
     );
   });

@@ -69,12 +69,12 @@ describe("OpenLab experiment domain", () => {
     );
   });
 
-  it("treats Trustless Work multi-release approval as an immediate local release", () => {
-    const released = approveMilestoneLocally(waterWatchSlug, "waterwatch-methodology", "tx-approve-1");
+  it("marks Trustless Work approval separately from milestone fund release", () => {
+    const approved = approveMilestoneLocally(waterWatchSlug, "waterwatch-methodology", "tx-approve-1");
 
-    const milestone = released.milestones.find((item) => item.id === "waterwatch-methodology");
-    expect(milestone?.status).toBe("released");
-    expect(milestone?.trustlessWorkStatus).toContain("Released");
+    const milestone = approved.milestones.find((item) => item.id === "waterwatch-methodology");
+    expect(milestone?.status).toBe("approved");
+    expect(milestone?.trustlessWorkStatus).toContain("Approved");
     expect(milestone?.lastTransactionHash).toBe("tx-approve-1");
   });
 

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import "./globals.css";
+
 export const metadata: Metadata = {
-  title: "OpenLab",
-  description: "Fund science. Verify evidence. Unlock impact.",
+  title: "EcoProof",
+  description: "Fund and verify real-world science experiments through Trustless Work.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -40,7 +40,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     return ok({
       operation: "release_milestone",
-      note: "Trustless Work docs say multi-release funds are released on approval; this route supports explicit release if needed.",
+      note: "Trustless Work multi-release milestone funds are released through release-milestone-funds.",
       milestoneId: params.id,
       experimentSlug: input.experimentSlug,
       pendingTransactionId: pendingTransaction.id,

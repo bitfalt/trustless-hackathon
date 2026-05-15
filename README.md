@@ -4,7 +4,7 @@ OpenLab funds citizen-science and public-interest experiments through Trustless 
 
 **Tagline:** Fund science. Verify evidence. Unlock impact.
 
-This repo currently contains the backend/domain foundation for the MVP. The React frontend can be built on top of these APIs.
+This repo contains the integrated Next.js MVP: the React frontend, OpenLab domain routes, and Trustless Work escrow integration live in one app.
 
 ## MVP demo
 
@@ -73,7 +73,7 @@ From `trustless-work-dev-skill` and `escrow-lab`:
 - `POST /escrow/multi-release/fund-escrow`
 - `POST /escrow/multi-release/complete-milestone`
 - `POST /escrow/multi-release/approve-milestone`
-- `POST /escrow/multi-release/release-milestone`
+- `POST /escrow/multi-release/release-milestone-funds`
 - `POST /helper/send-transaction`
 
 Current multi-release docs specify the `x-api-key` header.
@@ -89,7 +89,7 @@ cp .env.example .env.local
 Required for real Trustless Work calls:
 
 ```txt
-TRUSTLESS_WORK_API_BASE_URL=https://api.trustlesswork.com
+TRUSTLESS_WORK_API_BASE_URL=https://dev.api.trustlesswork.com
 TRUSTLESS_WORK_API_KEY=***
 TRUSTLESS_WORK_NETWORK=testnet
 OPENLAB_PLATFORM_ADDRESS=replace_with_stellar_wallet
@@ -254,7 +254,7 @@ Request:
 
 ### `POST /api/milestones/:id/approve`
 
-Calls Trustless Work `approve-milestone` and returns unsigned XDR for the verifier wallet. Trustless Work docs say multi-release funds are released immediately on approval, so after the signed approval transaction is submitted the backend marks the local milestone as `released`.
+Calls Trustless Work `approve-milestone` and returns unsigned XDR for the verifier wallet. After the signed approval transaction is submitted, the backend marks the local milestone as `approved`; funds are released by the explicit release route.
 
 Request:
 
@@ -269,7 +269,7 @@ Request:
 
 ### `POST /api/milestones/:id/release`
 
-Optional explicit release route. Trustless Work docs say approval auto-releases in multi-release escrows, but the endpoint exists as `POST /escrow/multi-release/release-milestone`.
+Explicit milestone release route. Trustless Work testnet exposes this as `POST /escrow/multi-release/release-milestone-funds`.
 
 Request:
 
@@ -295,7 +295,8 @@ A React frontend should:
 7. Use `/api/verifier/reviews` to populate the verifier dashboard.
 8. Use `/api/milestones/:id/complete` and `/api/milestones/:id/approve` for milestone lifecycle. The route validates that `:id` matches the submitted milestone index and experiment escrow contract.
 9. Use `/api/escrow/:contractId` when the UI needs canonical Trustless Work escrow state.
-10. Refresh the experiment after each signed transaction.
+10. Use `/api/escrow/discover?contractIds=C...` or the `role/address` and `signer` filters to discover canonical Trustless Work testnet escrows.
+11. Refresh the experiment after each signed transaction.
 
 ## Local development
 

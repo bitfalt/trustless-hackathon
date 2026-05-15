@@ -40,7 +40,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     return ok({
       operation: "approve_milestone",
-      note: "Trustless Work multi-release approval releases the milestone funds immediately.",
+      note: "Trustless Work multi-release approval marks the milestone approved; release-milestone-funds releases payment.",
       milestoneId: params.id,
       experimentSlug: input.experimentSlug,
       pendingTransactionId: pendingTransaction.id,
