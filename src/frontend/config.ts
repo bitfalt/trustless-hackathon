@@ -47,6 +47,14 @@ export interface WorkItem {
     amount: number
     status: string
     evidenceCount: number
+    evidence?: Array<{
+      id: string
+      type: 'methodology' | 'photo' | 'dataset' | 'report' | 'receipt'
+      title: string
+      url: string
+      submittedAt?: string
+      notes?: string
+    }>
     lastTransactionHash?: string
   }>
 }

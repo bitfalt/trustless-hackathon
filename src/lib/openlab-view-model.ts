@@ -34,6 +34,14 @@ export type ProjectCardView = {
     amount: number;
     status: string;
     evidenceCount: number;
+    evidence: Array<{
+      id: string;
+      type: "methodology" | "photo" | "dataset" | "report" | "receipt";
+      title: string;
+      url: string;
+      submittedAt?: string;
+      notes?: string;
+    }>;
     lastTransactionHash?: string;
   }>;
 };
@@ -88,6 +96,14 @@ export function experimentToProjectCard(experiment: Experiment): ProjectCardView
       amount: milestone.amount,
       status: milestone.status,
       evidenceCount: milestone.evidence.length,
+      evidence: milestone.evidence.map((evidence) => ({
+        id: evidence.id,
+        type: evidence.type,
+        title: evidence.title,
+        url: evidence.url,
+        submittedAt: evidence.submittedAt,
+        notes: evidence.notes,
+      })),
       lastTransactionHash: milestone.lastTransactionHash,
     })),
   };

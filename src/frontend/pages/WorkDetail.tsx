@@ -14,6 +14,20 @@ type ApiResult = {
   message?: string
 }
 
+type EvidenceDraft = {
+  title: string
+  url: string
+  type: 'methodology' | 'photo' | 'dataset' | 'report' | 'receipt'
+  notes: string
+}
+
+const emptyEvidenceDraft = (): EvidenceDraft => ({
+  title: '',
+  url: '',
+  type: 'report',
+  notes: '',
+})
+
 export default function WorkDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -22,6 +36,7 @@ export default function WorkDetail() {
   const [isBusy, setIsBusy] = useState(false)
   const [lastResult, setLastResult] = useState<string>()
   const [fundAmount, setFundAmount] = useState("25")
+  const [evidenceDrafts, setEvidenceDrafts] = useState<Record<string, EvidenceDraft>>({})
 
   const worksById = useMemo(
     () =>
@@ -119,19 +134,46 @@ export default function WorkDetail() {
 
   async function submitEvidence(work: WorkItem, milestoneId: string) {
     if (!address) throw new Error('Connect the service provider wallet first')
-    return callApi(`/api/milestones/${milestoneId}/submit-evidence`, {
+    const draft = evidenceDrafts[milestoneId] ?? emptyEvidenceDraft()
+    const title = draft.title.trim()
+    const url = draft.url.trim()
+    const notes = draft.notes.trim()
+
+    if (!title) throw new Error('Enter an evidence title')
+    if (!url) throw new Error('Enter an evidence URL')
+    if (!url.startsWith('https://') && !url.startsWith('ipfs://')) {
+      throw new Error('Evidence URL must start with https:// or ipfs://')
+    }
+
+    const result = await callApi(`/api/milestones/${milestoneId}/submit-evidence`, {
       experimentSlug: work.slug ?? work.id,
       walletAddress: address,
-      notes: 'Demo evidence generated from the EcoProof operator panel.',
+      notes: notes || undefined,
       evidence: [
         {
           id: `evidence-${Date.now()}`,
-          type: 'dataset',
-          title: 'Field dataset',
-          url: 'https://example.com/openlab/field-dataset.csv',
+          type: draft.type,
+          title,
+          url,
         },
       ],
     })
+    updateEvidenceDraft(milestoneId, emptyEvidenceDraft())
+    return result
+  }
+
+  function evidenceDraft(milestoneId: string) {
+    return evidenceDrafts[milestoneId] ?? emptyEvidenceDraft()
+  }
+
+  function updateEvidenceDraft(milestoneId: string, patch: Partial<EvidenceDraft>) {
+    setEvidenceDrafts((current) => ({
+      ...current,
+      [milestoneId]: {
+        ...(current[milestoneId] ?? emptyEvidenceDraft()),
+        ...patch,
+      },
+    }))
   }
 
   async function milestoneTransaction(
@@ -518,6 +560,71 @@ export default function WorkDetail() {
                     <span>{milestone.evidenceCount} evidence item{milestone.evidenceCount === 1 ? '' : 's'}</span>
                     {milestone.lastTransactionHash && <span>{shortId(milestone.lastTransactionHash)}</span>}
                   </div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(180px, 1fr) minmax(220px, 1.4fr)',
+                      gap: '8px',
+                      marginBottom: '12px',
+                    }}
+                    className="evidence-grid"
+                  >
+                    <input
+                      value={evidenceDraft(milestone.id).title}
+                      placeholder="Evidence title"
+                      onChange={(event) => updateEvidenceDraft(milestone.id, { title: event.target.value })}
+                      style={evidenceInputStyle}
+                    />
+                    <input
+                      value={evidenceDraft(milestone.id).url}
+                      placeholder="https://... or ipfs://..."
+                      onChange={(event) => updateEvidenceDraft(milestone.id, { url: event.target.value })}
+                      style={evidenceInputStyle}
+                    />
+                    <select
+                      value={evidenceDraft(milestone.id).type}
+                      onChange={(event) => updateEvidenceDraft(milestone.id, { type: event.target.value as EvidenceDraft['type'] })}
+                      style={evidenceInputStyle}
+                    >
+                      <option value="report">Report</option>
+                      <option value="dataset">Dataset</option>
+                      <option value="photo">Photo</option>
+                      <option value="methodology">Methodology</option>
+                      <option value="receipt">Receipt</option>
+                    </select>
+                    <input
+                      value={evidenceDraft(milestone.id).notes}
+                      placeholder="Notes (optional)"
+                      onChange={(event) => updateEvidenceDraft(milestone.id, { notes: event.target.value })}
+                      style={evidenceInputStyle}
+                    />
+                  </div>
+                  {milestone.evidence && milestone.evidence.length > 0 && (
+                    <div style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
+                      {milestone.evidence.map((evidence) => (
+                        <a
+                          key={evidence.id}
+                          href={evidence.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            padding: '10px 12px',
+                            border: '1px solid rgba(200,247,220,0.2)',
+                            background: 'rgba(200,247,220,0.06)',
+                            color: '#f4fff8',
+                            textDecoration: 'none',
+                            fontSize: '0.84rem',
+                          }}
+                        >
+                          <span>{evidence.title}</span>
+                          <span style={{ color: 'rgba(232,230,224,0.62)', textTransform: 'uppercase' }}>{evidence.type}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       type="button"
@@ -670,4 +777,14 @@ const linkButtonStyle: CSSProperties = {
   letterSpacing: '0.1em',
   textTransform: 'uppercase',
   textDecoration: 'none',
+}
+
+const evidenceInputStyle: CSSProperties = {
+  minWidth: 0,
+  background: 'rgba(255,255,255,0.055)',
+  border: '1px solid rgba(255,255,255,0.12)',
+  color: '#e8e6e0',
+  padding: '9px 10px',
+  fontFamily: '"Inter", sans-serif',
+  fontSize: '0.82rem',
 }
