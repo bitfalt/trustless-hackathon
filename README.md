@@ -80,7 +80,7 @@ GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5
 1. Start the app with `.env.local` configured.
 2. Connect a Stellar testnet wallet from the wallet picker.
 3. Click `Start` in the nav or hero.
-4. Submit the Community Water Quality Study at `/experiments/new`.
+4. Submit the Urban Heat Island Sensor Study at `/experiments/new`.
 5. Approve the wallet signing prompt to create the Trustless Work escrow immediately.
 6. Land on the project detail page with the contract ID already attached.
 7. Copy the contract ID from the project detail page.

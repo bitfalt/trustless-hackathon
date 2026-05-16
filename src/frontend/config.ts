@@ -153,11 +153,7 @@ export const footerConfig: FooterConfig = {
     { label: "Community", href: "/#community" },
   ],
   contactHeading: "CONNECT",
-  contactLinks: [
-    { label: "hello@ecoproof.io", href: "mailto:hello@ecoproof.io" },
-    { label: "GitHub", href: "https://github.com/Trustless-Work" },
-    { label: "Viewer", href: "https://viewer.trustlesswork.com/" },
-  ],
+  contactLinks: [],
   copyright: "© 2026 EcoProof",
   creditText: "BUILT FOR PUBLIC GOODS",
 }

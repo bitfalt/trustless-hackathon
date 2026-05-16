@@ -4,8 +4,8 @@ import { useOpenLabProjects } from '../openlab-projects'
 import { shortWallet, useWallet } from '../wallet'
 
 const initialMilestones = [
-  { title: 'Sampling plan verified', description: 'Verifier reviews the water sampling map, safety checklist, and collection protocol.', amount: 150, deliverables: 'sampling map, safety checklist, collection protocol' },
-  { title: 'Open water report published', description: 'Project team publishes the field dataset, photos, and final community water report.', amount: 150, deliverables: 'field dataset, sample photos, public report' },
+  { title: 'Sensor kit validated', description: 'Verifier reviews the calibration checklist, installation plan, and baseline sensor readings.', amount: 150, deliverables: 'calibration checklist, installation map, baseline readings' },
+  { title: 'Open heat map published', description: 'Project team publishes the field dataset, photos, and public heat-island report.', amount: 150, deliverables: 'temperature dataset, site photos, public heat map report' },
 ]
 
 export default function NewExperiment() {
@@ -14,13 +14,13 @@ export default function NewExperiment() {
   const { reloadProjects } = useOpenLabProjects()
   const [status, setStatus] = useState<string>()
   const [form, setForm] = useState({
-    title: 'Community Water Quality Study',
-    location: 'Cartago, Costa Rica',
-    category: 'Water',
-    summary: 'A community team measures water quality and publishes evidence for local residents.',
-    problem: 'Residents need transparent local water quality data before they can advocate for remediation.',
-    methodology: 'The team collects scheduled samples, records field measurements, uploads raw evidence, and publishes an open report.',
-    imageUrl: '/images/project-water-costa-rica.jpg',
+    title: 'Urban Heat Island Sensor Study',
+    location: 'San José, Costa Rica',
+    category: 'Air',
+    summary: 'A student team maps neighborhood heat exposure with low-cost temperature sensors and publishes the results.',
+    problem: 'Residents need street-level heat data to identify unsafe hotspots near schools, bus stops, and public parks.',
+    methodology: 'The team calibrates portable sensors, records field measurements across selected routes, uploads evidence, and publishes an open heat map report.',
+    imageUrl: '/images/project-air-quality.jpg',
     fundingGoal: 300,
     approverWallet: '',
     releaseSignerWallet: '',
